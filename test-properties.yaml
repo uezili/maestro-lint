@@ -1,0 +1,38 @@
+appId: com.test.app
+tags:
+  - wip
+  - smoke
+name: '[TEST-002] - Teste de propriedades'
+onFlowStart:
+  - runFlow: 'setup.yaml'
+onFlowComplete:
+  - runFlow: 'teardown.yaml'
+---
+# Comandos corretos
+- tapOn:
+    id: 'buttonId'
+- assertVisible: '.*Texto.*'
+- inputText: 'Valor do texto'
+
+# Comandos com propriedades inválidas
+- tapOn:
+    txt: 'valor'
+- copyTextFrom: # seletor vazio
+- tapOn:
+- tapOn: test
+- scrollUntilVisible:
+    direction: DOWN
+    when:
+      vible: '.*Texto.*'
+- runFlow:
+    fle: true
+    when:
+      platform: ios
+      notisible: '.*Erro.*'
+      visile: '.*OutroTexto.*'
+    commands:
+      - taOn: 'OK'
+- runFlow:
+    file: '../../common/subflows/access-menu-subflow.yaml'
+    when:
+      platform: 'Teste'

@@ -1,0 +1,32 @@
+{
+  "name": "sicredi-x-mobile-test-linter",
+  "version": "1.0.0",
+  "description": "Linter para validar testes Maestro do projeto Sicredi X Mobile",
+  "main": "maestro-linter.js",
+  "scripts": {
+    "lint": "node maestro-linter.js",
+    "lint:file": "node maestro-linter.js",
+    "eslint": "eslint .",
+    "eslint:fix": "eslint . --fix",
+    "prettier": "prettier --check .",
+    "prettier:fix": "prettier --write .",
+    "format": "npm run prettier:fix && npm run eslint:fix"
+  },
+  "keywords": [
+    "maestro",
+    "linter",
+    "mobile",
+    "test",
+    "automation"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "js-yaml": "^4.1.0",
+    "fast-glob": "^3.3.2"
+  },
+  "devDependencies": {
+    "eslint": "^8.57.0",
+    "prettier": "^3.1.1"
+  }
+}
