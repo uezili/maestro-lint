@@ -5,99 +5,97 @@
 /**
  * Valida a indentação de um arquivo YAML
  * @param {string} text - Conteúdo do arquivo
- * @param {string} filePath - Caminho do arquivo
  * @returns {string[]} Array de erros de indentação encontrados
  */
-function validateIndentation(text, filePath = '') {
+function validateIndentation(text) {
   const errors = [];
   const lines = text.split('\n');
-  const INDENT_SIZE = 2; // Maestro usa 2 espaços de indentação
+  const INDENT_SIZE = 2;
+  const PROPERTY_DELTA = 4; // Propriedades abaixo de "- comando:" devem ter +4 espaços
+
+  // Encontra a linha do separador ---
+  let separatorLineIdx = -1;
+  lines.forEach((line, idx) => {
+    if (line.trim() === '---') {
+      separatorLineIdx = idx;
+    }
+  });
+
+  let prevIsCommandListItem = false; // Ex.: "- tapOn:" na seção de comandos
 
   lines.forEach((line, idx) => {
     const lineNumber = idx + 1;
     const trimmed = line.trim();
+    const isInCommandsSection = separatorLineIdx !== -1 && idx > separatorLineIdx;
 
     // Ignora linhas vazias e comentários
     if (trimmed === '' || trimmed.startsWith('#')) {
       return;
     }
 
+    // Ignora o separador ---
+    if (trimmed === '---') {
+      return;
+    }
+
     // Detecta uso de TAB
     if (line.includes('\t')) {
-      errors.push(`Linha ${lineNumber}: usa TAB em vez de espaços. Use ${INDENT_SIZE} espaços para indentação.`);
-      return; // Não valida mais nada nesta linha
+      errors.push(`Linha ${lineNumber}: não use TABs na indentação; utilize espaços (múltiplos de 2).`);
+      return;
     }
 
     // Calcula número de espaços antes do primeiro caractere
     const leadingSpaces = line.search(/\S/);
-    if (leadingSpaces === -1) return; // Linha só com espaços
+    if (leadingSpaces === -1) {
+      return; // Linha só com espaços
+    }
 
     // Valida que a indentação é múltiplo de INDENT_SIZE
     if (leadingSpaces % INDENT_SIZE !== 0) {
+      const contentPreview = trimmed.substring(0, 30);
       errors.push(
-        `Linha ${lineNumber}: indentação incorreta (${leadingSpaces} espaços). Deve ser múltiplo de ${INDENT_SIZE}.`
+        `Linha ${lineNumber}: indentação incorreta (${leadingSpaces} espaços em "${contentPreview}${trimmed.length > 30 ? '...' : ''}"). Deve ser múltiplo de 2.`
       );
     }
 
-    // Valida indentação de itens de lista (começam com -)
-    if (trimmed.startsWith('- ')) {
-      const nextLineIdx = idx + 1;
-      if (nextLineIdx < lines.length) {
-        const nextLine = lines[nextLineIdx];
-        const nextTrimmed = nextLine.trim();
+    let emitted = false;
 
-        // Se próxima linha não é vazia, comentário, outra lista, ou separador ---
-        if (nextTrimmed && !nextTrimmed.startsWith('#') && !nextTrimmed.startsWith('-')) {
-          const nextLeadingSpaces = nextLine.search(/\S/);
+    // ============ REGRAS ESPECÍFICAS PARA SEÇÃO DE COMANDOS (após ---) ============
+    if (isInCommandsSection && trimmed.startsWith('- ')) {
+      const opensMapping = /^- +[A-Za-z0-9_-]+:/.test(trimmed);
 
-          // Se a próxima linha tem indentação 0, é uma nova chave raiz, não é propriedade da lista
-          if (nextLeadingSpaces === 0) {
-            return;
-          }
-
-          // Verifica se é uma propriedade aninhada do item de lista (tem ":")
-          if (nextTrimmed.includes(':') && nextLeadingSpaces !== -1) {
-            // Propriedades de um item de lista devem ter indentação maior que o item
-            if (nextLeadingSpaces <= leadingSpaces) {
-              errors.push(
-                `Linha ${
-                  nextLineIdx + 1
-                }: propriedade de item de lista deve ter indentação maior que o item (esperado > ${leadingSpaces} espaços, encontrado ${nextLeadingSpaces}).`
-              );
-            }
-          }
-        }
+      // Itens de comando devem estar SEMPRE no nível raiz (0 espaços)
+      if (opensMapping && leadingSpaces !== 0) {
+        errors.push(
+          `Linha ${lineNumber}: comando deve estar no nível raiz. Remova ${leadingSpaces} espaço${leadingSpaces > 1 ? 's' : ''}.`
+        );
+        emitted = true;
       }
-    }
-  });
 
-  return errors;
-}
-
-/**
- * Valida se o YAML pode ser parseado corretamente
- * @param {string} text - Conteúdo do arquivo
- * @param {object} yaml - Instância do js-yaml
- * @returns {string[]} Array de erros de parsing
- */
-function validateYamlParsing(text, yaml) {
-  const errors = [];
-  const docs = text.split('---');
-
-  docs.forEach((docText, idx) => {
-    if (docText.trim() === '') return;
-
-    try {
-      yaml.load(docText);
-    } catch (error) {
-      // Extrai informações do erro do js-yaml
-      const match = error.message.match(/\((\d+):(\d+)\)/);
-      if (match) {
-        const line = match[1];
-        const col = match[2];
-        errors.push(`Documento ${idx + 1}, linha ${line}: ${error.message.split('(')[0].trim()}`);
-      } else {
-        errors.push(`Documento ${idx + 1}: ${error.message}`);
+      prevIsCommandListItem = opensMapping;
+      prevLeadingSpaces = leadingSpaces;
+    } else if (isInCommandsSection && trimmed.includes(':') && prevIsCommandListItem) {
+      // Propriedades de comando devem ter exatamente +4 espaços
+      const expected = PROPERTY_DELTA; // prevLeadingSpaces é sempre 0 em seção de comandos
+      if (leadingSpaces !== expected) {
+        if (leadingSpaces > expected) {
+          const extra = leadingSpaces - expected;
+          errors.push(
+            `Linha ${lineNumber}: propriedade de comando com espaços a mais. Remova ${extra} espaço${extra > 1 ? 's' : ''}.`
+          );
+        } else {
+          const missing = expected - leadingSpaces;
+          errors.push(
+            `Linha ${lineNumber}: propriedade de comando com indentação insuficiente. Falta${missing !== 1 ? 'm' : ''} ${missing} espaço${missing > 1 ? 's' : ''}.`
+          );
+        }
+        emitted = true;
+      }
+      prevIsCommandListItem = false;
+    } else {
+      // Reseta contexto de comando quando sai da estrutura
+      if (isInCommandsSection && !trimmed.startsWith('- ') && !trimmed.includes(':')) {
+        prevIsCommandListItem = false;
       }
     }
   });
@@ -106,6 +104,5 @@ function validateYamlParsing(text, yaml) {
 }
 
 module.exports = {
-  validateIndentation,
-  validateYamlParsing
+  validateIndentation
 };

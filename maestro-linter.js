@@ -10,9 +10,9 @@ const fg = require('fast-glob');
 
 const { TAG_ONE_OF, NAME_PATTERN, VALID_PROPERTIES } = require('./src/constants');
 
-const { extractFlowPath, findLineNumber, getLineInfo, normalizeFlowPath, isValidFlowPath } = require('./src/helpers');
+const { extractFlowPath, findLineNumber, isValidFlowPath } = require('./src/helpers');
 const { validateCommands } = require('./src/validators');
-const { validateIndentation, validateYamlParsing } = require('./src/indentation-validator');
+const { validateIndentation } = require('./src/indentation-validator');
 
 /**
  * Valida um arquivo YAML de teste Maestro
@@ -24,17 +24,8 @@ function lintFile(filePath) {
   const errors = [];
 
   // Validar indentação primeiro (antes do parsing)
-  const indentErrors = validateIndentation(text, filePath);
+  const indentErrors = validateIndentation(text);
   errors.push(...indentErrors);
-
-  // Validar parsing YAML
-  const parseErrors = validateYamlParsing(text, yaml);
-  errors.push(...parseErrors);
-
-  // Se houver erros críticos de indentação/parsing, retorna sem continuar
-  if (parseErrors.length > 0) {
-    return errors;
-  }
 
   try {
     // Maestro usa múltiplos documentos YAML separados por '---'
@@ -63,7 +54,9 @@ function lintFile(filePath) {
         const lineNumber = findLineNumber(text, key);
         if (similarProp) {
           errors.push(
-            `Propriedade com sintaxe incorreta: "${key}" deveria ser "${similarProp}"${getLineInfo(lineNumber)}`
+            lineNumber
+              ? `Linha ${lineNumber}: propriedade com sintaxe incorreta: "${key}" deveria ser "${similarProp}".`
+              : `Propriedade com sintaxe incorreta: "${key}" deveria ser "${similarProp}".`
           );
         } else {
           errors.push(`Propriedade inválida no cabeçalho: "${key}"${getLineInfo(lineNumber)}`);
@@ -90,56 +83,32 @@ function lintFile(filePath) {
     }
 
     // Validar onFlowStart - aceita caminhos relativos também
-    let onFlowStartProp = doc.onFlowStart;
-    // Se onFlowStart não existe mas existe com capitalização errada, busca
-    if (!onFlowStartProp) {
-      const incorrectKey = docKeys.find(k => k.toLowerCase() === 'onflowstart');
-      if (incorrectKey) {
-        onFlowStartProp = doc[incorrectKey];
-      }
-    }
+    const onFlowStartProp = doc.onFlowStart || doc[docKeys.find(k => k.toLowerCase() === 'onflowstart')];
 
     if (onFlowStartProp) {
-      let foundSetupPath = null;
-      const expectedDisplay = 'workspace\\common\\subflows\\setup.yaml';
-
       const hasSetup = (onFlowStartProp || []).some(step => {
         const flowPath = extractFlowPath(step);
-        if (typeof flowPath === 'string' && isValidFlowPath(flowPath, 'setup.yaml')) {
-          foundSetupPath = flowPath;
-          return true;
-        }
-        return false;
+        return typeof flowPath === 'string' && isValidFlowPath(flowPath, 'setup.yaml');
       });
 
       if (!hasSetup) {
-        // Missing setup.yaml: show expected path only
         const lineNumber = findLineNumber(text, 'setup.yaml');
-        errors.push(`onFlowStart deve incluir setup.yaml (${expectedDisplay})${getLineInfo(lineNumber)}`);
+        errors.push(`onFlowStart deve incluir setup.yaml (workspace\\common\\subflows\\setup.yaml)${getLineInfo(lineNumber)}`);
       }
-      // If correct, do not emit any path message
     }
 
     // Validar onFlowComplete - aceita caminhos relativos também
-    let onFlowCompleteProp = doc.onFlowComplete;
-    // Se onFlowComplete não existe mas existe com capitalização errada, busca
-    if (!onFlowCompleteProp) {
-      const incorrectKey = docKeys.find(k => k.toLowerCase() === 'onflowcomplete');
-      if (incorrectKey) {
-        onFlowCompleteProp = doc[incorrectKey];
-      }
-    }
+    const onFlowCompleteProp = doc.onFlowComplete || doc[docKeys.find(k => k.toLowerCase() === 'onflowcomplete')];
 
     if (onFlowCompleteProp) {
-      const expectedDisplay = 'workspace\\common\\subflows\\teardown.yaml';
-
       const hasTeardown = (onFlowCompleteProp || []).some(step => {
         const flowPath = extractFlowPath(step);
         return typeof flowPath === 'string' && isValidFlowPath(flowPath, 'teardown.yaml');
       });
+
       if (!hasTeardown) {
         const lineNumber = findLineNumber(text, 'teardown.yaml');
-        errors.push(`onFlowComplete deve incluir teardown.yaml (${expectedDisplay})${getLineInfo(lineNumber)}`);
+        errors.push(`onFlowComplete deve incluir teardown.yaml (workspace\\common\\subflows\\teardown.yaml)${getLineInfo(lineNumber)}`);
       }
     }
 
@@ -198,19 +167,15 @@ function displayResults(passed, failed, total) {
  * Processa e exibe erros de um arquivo
  * @param {string} filePath - Caminho do arquivo
  * @param {string[]} errors - Array de erros
- * @param {boolean} verbose - Se deve exibir mensagens de sucesso
+ * @returns {boolean} true se passou, false se falhou
  */
-function displayFileResult(filePath, errors, verbose = false) {
+function displayFileResult(filePath, errors) {
   if (errors.length) {
     console.log(`\n❌ ${path.basename(filePath)}`);
     errors.forEach(e => console.log(`   - ${e}`));
     return false;
-  } else {
-    if (verbose) {
-      console.log(`✅ ${path.basename(filePath)}\n`);
-    }
-    return true;
   }
+  return true;
 }
 
 /**

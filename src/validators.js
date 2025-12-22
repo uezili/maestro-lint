@@ -2,8 +2,8 @@
  * Funções de validação para o Maestro Linter
  */
 
-const { VALID_COMMANDS, COMMAND_PROPERTIES, WHEN_PROPERTIES } = require('./constants');
-const { getLineInfo, isValidPlatform, findLineNumber } = require('./helpers');
+const { VALID_COMMANDS, COMMAND_PROPERTIES, WHEN_PROPERTIES, SIBLING_PROPERTIES } = require('./constants');
+const { isValidPlatform, findLineNumber } = require('./helpers');
 
 /**
  * Valida as propriedades de um comando
@@ -27,13 +27,19 @@ function validateCommandProperties(commandName, commandValue, text, occurrence =
     // Se o schema requer propriedades obrigatórias, reporta erro
     if (schema.properties && schema.properties.length > 0) {
       errors.push(
-        `${commandName}: deve ter pelo menos uma propriedade: ${schema.properties.join(' ou ')}${getLineInfo(lineNumber)}`
+        lineNumber
+          ? `Linha ${lineNumber}: ${commandName} deve ter pelo menos uma propriedade: ${schema.properties.join(' ou ')}.`
+          : `${commandName}: deve ter pelo menos uma propriedade: ${schema.properties.join(' ou ')}.`
       );
       return errors;
     }
     // Se o schema requer um valor direto (requiresValue), reporta erro
     if (schema.requiresValue) {
-      errors.push(`${commandName}: requer um valor${getLineInfo(lineNumber)}`);
+      errors.push(
+        lineNumber
+          ? `Linha ${lineNumber}: ${commandName} requer um valor.`
+          : `${commandName}: requer um valor.`
+      );
       return errors;
     }
     return errors;
@@ -44,7 +50,11 @@ function validateCommandProperties(commandName, commandValue, text, occurrence =
     // Valida se não está vazio
     if (!commandValue || (typeof commandValue === 'string' && commandValue.trim() === '')) {
       const lineNumber = text ? findLineNumber(text, commandName, null, occurrence) : null;
-      errors.push(`${commandName}: seletor/valor não pode estar vazio${getLineInfo(lineNumber)}`);
+      errors.push(
+        lineNumber
+          ? `Linha ${lineNumber}: ${commandName} seletor/valor não pode estar vazio.`
+          : `${commandName}: seletor/valor não pode estar vazio.`
+      );
     }
     return errors;
   }
@@ -59,7 +69,11 @@ function validateCommandProperties(commandName, commandValue, text, occurrence =
       if (!validKeys.includes(key)) {
         // Busca pela propriedade inválida como contexto
         const lineNumber = text ? findLineNumber(text, key) : null;
-        errors.push(`${commandName}: propriedade inválida "${key}"${getLineInfo(lineNumber)}`);
+        errors.push(
+          lineNumber
+            ? `Linha ${lineNumber}: ${commandName} propriedade inválida "${key}".`
+            : `${commandName}: propriedade inválida "${key}".`
+        );
       }
     });
 
@@ -71,7 +85,9 @@ function validateCommandProperties(commandName, commandValue, text, occurrence =
         const invalidKey = cmdKeys.find(k => !validKeys.includes(k));
         const lineNumber = text ? findLineNumber(text, invalidKey || commandName, null, occurrence) : null;
         errors.push(
-          `${commandName}: deve ter pelo menos uma propriedade: ${schema.properties.join(' ou ')}${getLineInfo(lineNumber)}`
+          lineNumber
+            ? `Linha ${lineNumber}: ${commandName} deve ter pelo menos uma propriedade: ${schema.properties.join(' ou ')}.`
+            : `${commandName}: deve ter pelo menos uma propriedade: ${schema.properties.join(' ou ')}.`
         );
       }
 
@@ -79,7 +95,11 @@ function validateCommandProperties(commandName, commandValue, text, occurrence =
       schema.properties.forEach(prop => {
         if (commandValue[prop] !== undefined && (!commandValue[prop] || commandValue[prop].toString().trim() === '')) {
           const lineNumber = text ? findLineNumber(text, commandName, null, occurrence) : null;
-          errors.push(`${commandName}: propriedade "${prop}" não pode estar vazia${getLineInfo(lineNumber)}`);
+          errors.push(
+            lineNumber
+              ? `Linha ${lineNumber}: ${commandName} propriedade "${prop}" não pode estar vazia.`
+              : `${commandName}: propriedade "${prop}" não pode estar vazia.`
+          );
         }
       });
     }
@@ -87,7 +107,11 @@ function validateCommandProperties(commandName, commandValue, text, occurrence =
     // Se requer valor mas nenhum foi fornecido
     if (schema.requiresValue && (!commandValue || Object.keys(commandValue).length === 0)) {
       const lineNumber = text ? findLineNumber(text, commandName, null, occurrence) : null;
-      errors.push(`${commandName}: requer um valor${getLineInfo(lineNumber)}`);
+      errors.push(
+        lineNumber
+          ? `Linha ${lineNumber}: ${commandName} requer um valor.`
+          : `${commandName}: requer um valor.`
+      );
     }
 
     // Valida propriedades aninhadas 'when'
@@ -114,7 +138,7 @@ function validateWhenProperty(whenValue, text, commandName = null, commandOccurr
   if (typeof whenValue !== 'object' || whenValue === null) {
     const lineNumber = text ? findLineNumber(text, 'when', commandName, commandOccurrence) : null;
     errors.push(
-      `when: deve ser um objeto com propriedades (platform, visible, notVisible, true)${getLineInfo(lineNumber)}`
+      `Linha ${lineNumber}: 'when' deve ser um objeto com propriedades (platform, visible, notVisible, true).`
     );
     return errors;
   }
@@ -123,11 +147,21 @@ function validateWhenProperty(whenValue, text, commandName = null, commandOccurr
 
   // Verifica propriedades inválidas em 'when'
   whenKeys.forEach(key => {
+    // Verifica se é uma propriedade que deveria estar no nível do comando, não dentro de 'when'
+    if (SIBLING_PROPERTIES.includes(key)) {
+      const lineNumber =
+        text ? findLineNumber(text, key, commandName, commandOccurrence) || findLineNumber(text, key) : null;
+      const safeLine = lineNumber !== null ? lineNumber : '?';
+      errors.push(`Linha ${safeLine}: propriedade "${key}" está no nível errado (deve estar fora de 'when').`);
+      return;
+    }
+
     if (!WHEN_PROPERTIES.includes(key)) {
-      // Busca pela propriedade inválida específica
-      const lineNumber = text ? findLineNumber(text, key, commandName, commandOccurrence) : null;
+      const lineNumber =
+        text ? findLineNumber(text, key, commandName, commandOccurrence) || findLineNumber(text, key) : null;
+      const safeLine = lineNumber !== null ? lineNumber : '?';
       errors.push(
-        `when: propriedade inválida "${key}" (válidas: ${WHEN_PROPERTIES.join(', ')})${getLineInfo(lineNumber)}`
+        `Linha ${safeLine}: propriedade inválida "${key}" em 'when' (válidas: ${WHEN_PROPERTIES.join(', ')}).`
       );
     }
   });
@@ -136,11 +170,11 @@ function validateWhenProperty(whenValue, text, commandName = null, commandOccurr
   if (whenValue.platform) {
     if (typeof whenValue.platform !== 'string') {
       const lineNumber = text ? findLineNumber(text, 'platform', commandName, commandOccurrence) : null;
-      errors.push(`when: platform deve ser uma string (android | ios | web)${getLineInfo(lineNumber)}`);
+      errors.push(`Linha ${lineNumber}: platform deve ser uma string (android | ios | web).`);
     } else if (!isValidPlatform(whenValue.platform)) {
       const lineNumber = text ? findLineNumber(text, 'platform', commandName, commandOccurrence) : null;
       errors.push(
-        `when: platform deve ser "android", "ios" ou "web", recebido "${whenValue.platform}"${getLineInfo(lineNumber)}`
+        `Linha ${lineNumber}: platform deve ser "android", "ios" ou "web", recebido "${whenValue.platform}".`
       );
     }
   }
@@ -151,7 +185,7 @@ function validateWhenProperty(whenValue, text, commandName = null, commandOccurr
       const val = whenValue[prop];
       if (val === null || val === '' || (typeof val === 'string' && val.trim() === '')) {
         const lineNumber = text ? findLineNumber(text, prop) : null;
-        errors.push(`when: ${prop} não pode ser vazio${getLineInfo(lineNumber)}`);
+        errors.push(`Linha ${lineNumber}: ${prop} não pode ser vazio.`);
       }
     }
   });
@@ -162,7 +196,7 @@ function validateWhenProperty(whenValue, text, commandName = null, commandOccurr
     const isEmptyString = typeof val === 'string' && val.trim() === '';
     if (val === null || val === undefined || isEmptyString === true) {
       const lineNumber = text ? findLineNumber(text, 'true') : null;
-      errors.push(`when: true não pode ser vazio${getLineInfo(lineNumber)}`);
+      errors.push(`Linha ${lineNumber}: true não pode ser vazio.`);
     }
   }
 
@@ -174,11 +208,10 @@ function validateWhenProperty(whenValue, text, commandName = null, commandOccurr
  * @param {*[]} commands - Array de comandos a validar
  * @param {string[]} errors - Array de erros (será mutado)
  * @param {string} text - Texto completo do arquivo
- * @param {number} startLine - Linha inicial (não usado atualmente)
  * @param {Object} commandOccurrences - Mapa de ocorrências de cada comando
  * @returns {string[]} Array de erros encontrados
  */
-function validateCommands(commands, errors = [], text = '', startLine = 0, commandOccurrences = {}) {
+function validateCommands(commands, errors = [], text = '', commandOccurrences = {}) {
   if (!Array.isArray(commands)) {
     return errors;
   }
@@ -203,10 +236,16 @@ function validateCommands(commands, errors = [], text = '', startLine = 0, comma
       const lineNumber = text ? findLineNumber(text, commandName) : null;
       if (similarCommand) {
         errors.push(
-          `Comando com sintaxe incorreta: "${commandName}" deveria ser "${similarCommand}"${getLineInfo(lineNumber)}`
+          lineNumber
+            ? `Linha ${lineNumber}: comando com sintaxe incorreta: "${commandName}" deveria ser "${similarCommand}".`
+            : `Comando com sintaxe incorreta: "${commandName}" deveria ser "${similarCommand}".`
         );
       } else {
-        errors.push(`Comando inválido: "${commandName}"${getLineInfo(lineNumber)}`);
+        errors.push(
+          lineNumber
+            ? `Linha ${lineNumber}: comando inválido: "${commandName}".`
+            : `Comando inválido: "${commandName}".`
+        );
       }
       return;
     }
@@ -219,7 +258,7 @@ function validateCommands(commands, errors = [], text = '', startLine = 0, comma
     // Valida comandos aninhados (runFlow, repeat, retry, etc)
     if (typeof commandValue === 'object' && commandValue !== null) {
       if (commandValue.commands && Array.isArray(commandValue.commands)) {
-        validateCommands(commandValue.commands, errors, text, startLine, commandOccurrences);
+        validateCommands(commandValue.commands, errors, text, commandOccurrences);
       }
     }
   });

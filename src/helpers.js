@@ -5,15 +5,6 @@
 const { VALID_PLATFORMS } = require('./constants');
 
 /**
- * Formata informação de linha para exibição em mensagens de erro
- * @param {number|null} lineNumber - Número da linha
- * @returns {string} String formatada com número de linha ou vazia
- */
-function getLineInfo(lineNumber) {
-  return lineNumber ? ` (linha ${lineNumber})` : '';
-}
-
-/**
  * Valida se uma plataforma é válida
  * @param {string} platform - Plataforma a validar
  * @returns {boolean} true se válida, false caso contrário
@@ -53,16 +44,21 @@ function findLineNumber(text, searchTerm, context = null, occurrence = 1) {
   let currentOccurrence = 0;
   let contextOccurrence = 0;
 
+  const isCommentOrEmpty = line => /^\s*#/.test(line) || /^\s*$/.test(line);
+
   // Se temos um contexto específico, primeiro contamos as ocorrências de contexto
   if (context) {
     for (let i = 0; i < lines.length; i++) {
+      if (isCommentOrEmpty(lines[i])) continue;
       if (lines[i].includes(context)) {
         contextOccurrence++;
         if (contextOccurrence === occurrence) {
           // Encontramos o contexto correto, agora procura por searchTerm próximo
+          // Aumenta a janela de busca para 20 linhas para melhor cobertura
           const windowStart = i;
-          const windowEnd = Math.min(lines.length, i + 10); // Procura até 10 linhas à frente
+          const windowEnd = Math.min(lines.length, i + 20);
           for (let j = windowStart; j < windowEnd; j++) {
+            if (isCommentOrEmpty(lines[j])) continue;
             if (lines[j].includes(searchTerm)) {
               return j + 1;
             }
@@ -73,8 +69,9 @@ function findLineNumber(text, searchTerm, context = null, occurrence = 1) {
     }
   }
 
-  // Busca com ocorrência especificada
+  // Busca com ocorrência especificada (ignorando comentários e linhas vazias)
   for (let i = 0; i < lines.length; i++) {
+    if (isCommentOrEmpty(lines[i])) continue;
     if (lines[i].includes(searchTerm)) {
       currentOccurrence++;
       if (currentOccurrence === occurrence) {
@@ -92,47 +89,21 @@ function findLineNumber(text, searchTerm, context = null, occurrence = 1) {
  * @returns {string} Caminho normalizado
  */
 function normalizeFlowPath(flowPath) {
-  if (typeof flowPath !== 'string') return '';
+  if (typeof flowPath !== 'string') {return '';}
 
-  // Remove aspas simples/duplas
-  let normalized = flowPath.replace(/^['"]|['"]$/g, '');
+  // Remove aspas e converte barras invertidas para barras normais
+  let normalized = flowPath.replace(/^['"]|['"]$/g, '').replace(/\\/g, '/');
 
-  // Converte barras invertidas para barras normais
-  normalized = normalized.replace(/\\/g, '/');
-
-  // Resolve caminhos relativos como ../../common/subflows/setup.yaml
-  // e converte para workspace/common/subflows/setup.yaml
+  // Remove todos os ../ e fica apenas com o resto do caminho
   if (normalized.startsWith('../')) {
-    const parts = normalized.split('/');
-    let upLevels = 0;
-    let pathIndex = 0;
-
-    // Conta quantos níveis subir
-    for (let i = 0; i < parts.length; i++) {
-      if (parts[i] === '..') {
-        upLevels++;
-      } else {
-        pathIndex = i;
-        break;
-      }
+    normalized = normalized.replace(/^(\.\.\/)+/, '');
+    // Adiciona workspace/ se não começar com ele
+    if (!normalized.startsWith('workspace/')) {
+      normalized = `workspace/${normalized}`;
     }
-
-    // Se tem ../../ no início, assume que vem de tests/<produto>/
-    // Então ../../common/subflows/setup.yaml equivale a workspace/common/subflows/setup.yaml
-    if (upLevels >= 2) {
-      normalized = parts.slice(pathIndex).join('/');
-      if (!normalized.startsWith('workspace/')) {
-        normalized = 'workspace/' + normalized;
-      }
-    }
-  }
-
-  // Garante que começa com workspace/ ou common/
-  if (!normalized.startsWith('workspace/') && !normalized.startsWith('common/')) {
-    // Se tem common/subflows, adiciona workspace/ na frente
-    if (normalized.includes('common/subflows')) {
-      normalized = 'workspace/' + normalized;
-    }
+  } else if (!normalized.startsWith('workspace/') && normalized.includes('common/subflows')) {
+    // Se tem common/subflows mas não começa com workspace/, adiciona
+    normalized = `workspace/${normalized}`;
   }
 
   return normalized;
@@ -145,7 +116,9 @@ function normalizeFlowPath(flowPath) {
  * @returns {boolean} true se caminho aponta para o arquivo correto
  */
 function isValidFlowPath(flowPath, targetFile = 'setup.yaml') {
-  if (!flowPath) return false;
+  if (!flowPath) {
+    return false;
+  }
 
   const normalized = normalizeFlowPath(flowPath);
   const expectedPath = `workspace/common/subflows/${targetFile}`;
@@ -154,7 +127,6 @@ function isValidFlowPath(flowPath, targetFile = 'setup.yaml') {
 }
 
 module.exports = {
-  getLineInfo,
   isValidPlatform,
   extractFlowPath,
   findLineNumber,

@@ -11,9 +11,14 @@ onFlowComplete:
 - tapOn: 'Botão'
    - inputText: 'texto errado - indentação a mais'
 - tapOn:
-	id: 'button_tab'
+        id: 'button_tab'
 - tapOn:
     text: 'OK'
   - assertVisible: 'indentação errada'
 - tapOn:
      id: 'muitos_espacos'
+- runflow:
+    when:
+      platform: 'android'
+    commands:
+      - tapOn: 'Botão Android'

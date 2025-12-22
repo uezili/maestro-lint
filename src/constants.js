@@ -43,6 +43,9 @@ const VALID_COMMANDS = [
 
 const WHEN_PROPERTIES = ['platform', 'visible', 'notVisible', 'true'];
 
+// Propriedades que devem estar no mesmo nível de 'when', não dentro dele
+const SIBLING_PROPERTIES = ['commands', 'file', 'env'];
+
 const VALID_PLATFORMS = ['android', 'ios', 'web'];
 
 const COMMAND_PROPERTIES = {
@@ -159,8 +162,8 @@ const COMMAND_PROPERTIES = {
     optional: ['maxRetries']
   },
   runFlow: {
-    properties: ['file', 'commands'],
-    optional: ['env', 'when']
+    properties: [],
+    optional: ['env', 'when', 'file', 'commands']
   },
   runScript: {
     properties: [],
@@ -225,6 +228,7 @@ module.exports = {
   VALID_PROPERTIES,
   VALID_COMMANDS,
   WHEN_PROPERTIES,
+  SIBLING_PROPERTIES,
   VALID_PLATFORMS,
   COMMAND_PROPERTIES
 };
