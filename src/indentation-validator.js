@@ -22,6 +22,7 @@ function validateIndentation(text) {
   });
 
   let prevIsCommandListItem = false; // Ex.: "- tapOn:" na seção de comandos
+  let commandsBlockIndent = -1; // Armazena o nível de indentação do bloco "commands:"
 
   lines.forEach((line, idx) => {
     const lineNumber = idx + 1;
@@ -54,8 +55,18 @@ function validateIndentation(text) {
     if (leadingSpaces % INDENT_SIZE !== 0) {
       const contentPreview = trimmed.substring(0, 30);
       errors.push(
-        `Linha ${lineNumber}: indentação incorreta (${leadingSpaces} espaços em "${contentPreview}${trimmed.length > 30 ? '...' : ''}"). Deve ser múltiplo de 2.`
+        `Linha ${lineNumber}: indentação incorreta (${leadingSpaces} espaços em "${contentPreview}${trimmed.length > 30 ? '...' : ''}").`
       );
+    }
+
+    // Detecta se estamos entrando em um bloco "commands:"
+    if (trimmed === 'commands:' || trimmed.endsWith(':') && trimmed.includes('commands')) {
+      commandsBlockIndent = leadingSpaces;
+    }
+
+    // Reseta o bloco commands se voltarmos para um nível de indentação menor
+    if (commandsBlockIndent !== -1 && leadingSpaces <= commandsBlockIndent && !trimmed.startsWith('commands:')) {
+      commandsBlockIndent = -1;
     }
 
     let emitted = false;
@@ -64,8 +75,10 @@ function validateIndentation(text) {
     if (isInCommandsSection && trimmed.startsWith('- ')) {
       const opensMapping = /^- +[A-Za-z0-9_-]+:/.test(trimmed);
 
-      // Itens de comando devem estar SEMPRE no nível raiz (0 espaços)
-      if (opensMapping && leadingSpaces !== 0) {
+      // Itens de comando devem estar no nível raiz (0 espaços) OU dentro de um bloco "commands:" com indentação > commandsBlockIndent
+      const isInsideCommandsBlock = commandsBlockIndent !== -1 && leadingSpaces > commandsBlockIndent;
+      
+      if (opensMapping && leadingSpaces !== 0 && !isInsideCommandsBlock) {
         errors.push(
           `Linha ${lineNumber}: comando deve estar no nível raiz. Remova ${leadingSpaces} espaço${leadingSpaces > 1 ? 's' : ''}.`
         );
