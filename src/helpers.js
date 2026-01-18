@@ -1,7 +1,3 @@
-/**
- * Funções auxiliares para o Maestro Linter
- */
-
 const { VALID_PLATFORMS } = require('./constants');
 
 /**
@@ -46,19 +42,20 @@ function findLineNumber(text, searchTerm, context = null, occurrence = 1) {
 
   const isCommentOrEmpty = line => /^\s*#/.test(line) || /^\s*$/.test(line);
 
-  // Se temos um contexto específico, primeiro contamos as ocorrências de contexto
   if (context) {
     for (let i = 0; i < lines.length; i++) {
-      if (isCommentOrEmpty(lines[i])) continue;
+      if (isCommentOrEmpty(lines[i])) {
+        continue;
+      }
       if (lines[i].includes(context)) {
         contextOccurrence++;
         if (contextOccurrence === occurrence) {
-          // Encontramos o contexto correto, agora procura por searchTerm próximo
-          // Aumenta a janela de busca para 20 linhas para melhor cobertura
           const windowStart = i;
           const windowEnd = Math.min(lines.length, i + 20);
           for (let j = windowStart; j < windowEnd; j++) {
-            if (isCommentOrEmpty(lines[j])) continue;
+            if (isCommentOrEmpty(lines[j])) {
+              continue;
+            }
             if (lines[j].includes(searchTerm)) {
               return j + 1;
             }
@@ -69,9 +66,10 @@ function findLineNumber(text, searchTerm, context = null, occurrence = 1) {
     }
   }
 
-  // Busca com ocorrência especificada (ignorando comentários e linhas vazias)
   for (let i = 0; i < lines.length; i++) {
-    if (isCommentOrEmpty(lines[i])) continue;
+    if (isCommentOrEmpty(lines[i])) {
+      continue;
+    }
     if (lines[i].includes(searchTerm)) {
       currentOccurrence++;
       if (currentOccurrence === occurrence) {
@@ -89,20 +87,18 @@ function findLineNumber(text, searchTerm, context = null, occurrence = 1) {
  * @returns {string} Caminho normalizado
  */
 function normalizeFlowPath(flowPath) {
-  if (typeof flowPath !== 'string') {return '';}
+  if (typeof flowPath !== 'string') {
+    return '';
+  }
 
-  // Remove aspas e converte barras invertidas para barras normais
   let normalized = flowPath.replace(/^['"]|['"]$/g, '').replace(/\\/g, '/');
 
-  // Remove todos os ../ e fica apenas com o resto do caminho
   if (normalized.startsWith('../')) {
     normalized = normalized.replace(/^(\.\.\/)+/, '');
-    // Adiciona workspace/ se não começar com ele
     if (!normalized.startsWith('workspace/')) {
       normalized = `workspace/${normalized}`;
     }
   } else if (!normalized.startsWith('workspace/') && normalized.includes('common/subflows')) {
-    // Se tem common/subflows mas não começa com workspace/, adiciona
     normalized = `workspace/${normalized}`;
   }
 
