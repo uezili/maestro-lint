@@ -170,7 +170,7 @@ function lintFile(filePath) {
         }
       });
     } else {
-      errors.push(`Erro na identação do comando: ${error.message}`);
+      errors.push(`Erro na indentação do comando: ${error.message}`);
     }
 
     parsingError = true;
@@ -265,7 +265,7 @@ function lintFile(filePath) {
               }
             });
           } else {
-            errors.push(`Erro ao fazer identação dos comandos: ${commandError.message}`);
+            errors.push(`Erro ao fazer indentação dos comandos: ${commandError.message}`);
           }
           tryValidateCommandsByText(text, errors);
         }
