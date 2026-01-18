@@ -96,55 +96,6 @@ function detectErrorsInDocument(docText, lineOffset = 0) {
 }
 
 /**
- * Detecta indentação inconsistente em linhas de comando
- * Procura por padrões como: "- cmd:" seguido de "  - cmd:" 
- * @param {string} text - Conteúdo do arquivo YAML
- * @returns {Object} { errors: [], lineNumbers: Set }
- */
-function detectIndentationInconsistencies(text) {
-  const errors = [];
-  const lines = text.split('\n');
-  const commandLinePattern = /^(\s*)-\s+\w+:/;
-  let afterSeparator = false;
-  let firstCommandFound = false;
-
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
-    
-    if (line.trim() === '---') {
-      afterSeparator = true;
-      continue;
-    }
-    
-    if (!line.trim() || line.trim().startsWith('#')) continue;
-
-    const match = line.match(commandLinePattern);
-    if (match && afterSeparator) {
-      const currentIndent = match[1].length;
-
-      if (!firstCommandFound) {
-        firstCommandFound = true;
-        if (currentIndent > 0) {
-          errors.push({
-            message: `bad indentation of a sequence entry (${i + 1}:${currentIndent + 1})`,
-            lineNumber: i + 1
-          });
-        }
-      } else {
-        if (currentIndent > 0) {
-          errors.push({
-            message: `bad indentation of a sequence entry (${i + 1}:${currentIndent + 1})`,
-            lineNumber: i + 1
-          });
-        }
-      }
-    }
-  }
-
-  return errors;
-}
-
-/**
  * Captura TODOS os erros de parsing da biblioteca js-yaml
  * Trata documento de header e comandos separadamente
  * @param {string} text - Conteúdo do arquivo YAML completo
@@ -162,7 +113,7 @@ function detectMultipleParsingErrors(text) {
   if (docs[1]) {
     const headerLines = docs[0] ? docs[0].split('\n').length : 0;
     const lineOffset = headerLines + 1;
-    
+
     const commandsErrors = detectErrorsInDocument(docs[1], lineOffset);
     errors.push(...commandsErrors);
   }
@@ -173,4 +124,3 @@ function detectMultipleParsingErrors(text) {
 module.exports = {
   detectMultipleParsingErrors
 };
- 

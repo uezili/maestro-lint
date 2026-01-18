@@ -1,10 +1,5 @@
-/**
- * Constantes do Maestro Linter
- */
-
 const TAG_ONE_OF = ['smoke', 'functional'];
-const NAME_PATTERN = /^\[.+\]\s-\s.+$/;
-const VALID_PROPERTIES = ['appId', 'tags', 'name', 'onFlowStart', 'onFlowComplete', 'env'];
+const VALID_PROPERTIES = ['appId', 'tags', 'onFlowStart', 'onFlowComplete', 'env'];
 
 const VALID_COMMANDS = [
   'assertVisible',
@@ -227,4 +222,3 @@ module.exports = {
   VALID_PLATFORMS,
   COMMAND_PROPERTIES
 };
- 

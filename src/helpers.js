@@ -106,23 +106,6 @@ function normalizeFlowPath(flowPath) {
 }
 
 /**
- * Valida se o caminho aponta para setup.yaml ou teardown.yaml correto
- * @param {string} flowPath - Caminho do flow
- * @param {string} targetFile - Nome do arquivo alvo (setup.yaml ou teardown.yaml)
- * @returns {boolean} true se caminho aponta para o arquivo correto
- */
-function isValidFlowPath(flowPath, targetFile = 'setup.yaml') {
-  if (!flowPath) {
-    return false;
-  }
-
-  const normalized = normalizeFlowPath(flowPath);
-  const expectedPath = `workspace/common/subflows/${targetFile}`;
-
-  return normalized === expectedPath;
-}
-
-/**
  * Calcula a distância de Levenshtein entre duas strings
  * @param {string} a - Primeira string
  * @param {string} b - Segunda string
@@ -181,7 +164,6 @@ module.exports = {
   extractFlowPath,
   findLineNumber,
   normalizeFlowPath,
-  isValidFlowPath,
   levenshteinDistance,
   findSimilarString
 };
