@@ -106,23 +106,6 @@ function normalizeFlowPath(flowPath) {
 }
 
 /**
- * Valida se o caminho aponta para setup.yaml ou teardown.yaml correto
- * @param {string} flowPath - Caminho do flow
- * @param {string} targetFile - Nome do arquivo alvo (setup.yaml ou teardown.yaml)
- * @returns {boolean} true se caminho aponta para o arquivo correto
- */
-function isValidFlowPath(flowPath, targetFile = 'setup.yaml') {
-  if (!flowPath) {
-    return false;
-  }
-
-  const normalized = normalizeFlowPath(flowPath);
-  const expectedPath = `workspace/common/subflows/${targetFile}`;
-
-  return normalized === expectedPath;
-}
-
-/**
  * Calcula a distância de Levenshtein entre duas strings
  * @param {string} a - Primeira string
  * @param {string} b - Segunda string
@@ -152,11 +135,35 @@ function levenshteinDistance(a, b) {
   return matrix[b.length][a.length];
 }
 
+/**
+ * Encontra string similar usando distância de Levenshtein
+ * @param {string} typo - String com possível erro
+ * @param {string[]} validStrings - Lista de strings válidas
+ * @param {number} tolerancePercentage - Percentual de tolerância (padrão: 0.3 = 30%)
+ * @returns {string|null} String válida mais similar ou null
+ */
+function findSimilarString(typo, validStrings, tolerancePercentage = 0.3) {
+  let bestMatch = null;
+  let minDistance = Infinity;
+
+  for (const validStr of validStrings) {
+    const distance = levenshteinDistance(typo.toLowerCase(), validStr.toLowerCase());
+    const maxAllowedDistance = Math.floor(validStr.length * tolerancePercentage);
+
+    if (distance <= maxAllowedDistance && distance < minDistance) {
+      minDistance = distance;
+      bestMatch = validStr;
+    }
+  }
+
+  return bestMatch;
+}
+
 module.exports = {
   isValidPlatform,
   extractFlowPath,
   findLineNumber,
   normalizeFlowPath,
-  isValidFlowPath,
-  levenshteinDistance
+  levenshteinDistance,
+  findSimilarString
 };
