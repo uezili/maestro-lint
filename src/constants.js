@@ -1,5 +1,5 @@
 const TAG_ONE_OF = ['smoke', 'functional'];
-const VALID_PROPERTIES = ['appId', 'tags', 'onFlowStart', 'onFlowComplete', 'env'];
+const VALID_PROPERTIES = ['appId', 'tags', 'onFlowStart', 'onFlowComplete', 'env', 'name'];
 
 const VALID_COMMANDS = [
   'assertVisible',
@@ -214,7 +214,6 @@ const COMMAND_PROPERTIES = {
 
 module.exports = {
   TAG_ONE_OF,
-  NAME_PATTERN,
   VALID_PROPERTIES,
   VALID_COMMANDS,
   WHEN_PROPERTIES,

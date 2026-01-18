@@ -66,7 +66,7 @@ class LintEngine {
    */
   _validateHeader(headerDoc, text) {
     const errors = [];
-    const { VALID_PROPERTIES, TAG_ONE_OF, NAME_PATTERN } = require('./constants');
+    const { VALID_PROPERTIES, TAG_ONE_OF } = require('./constants');
     const { findLineNumber } = require('./helpers');
 
     // Validar propriedades

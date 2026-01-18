@@ -1,4 +1,4 @@
-const { VALID_PROPERTIES, TAG_ONE_OF, NAME_PATTERN } = require('../constants');
+const { VALID_PROPERTIES, TAG_ONE_OF } = require('../constants');
 const { findLineNumber } = require('../helpers');
 const ValidationError = require('./ValidationError');
 
@@ -18,7 +18,6 @@ class HeaderValidator {
 
     errors.push(...this._validateProperties(doc, text));
     errors.push(...this._validateTags(doc));
-    errors.push(...this._validateName(doc));
 
     return errors;
   }
