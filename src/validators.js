@@ -1,7 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const { VALID_COMMANDS, COMMAND_PROPERTIES, WHEN_PROPERTIES, SIBLING_PROPERTIES } = require('./constants');
-const { isValidPlatform, findLineNumber } = require('./helpers');
+const { isValidPlatform, findLineNumber, levenshteinDistance } = require('./helpers');
 
 /**
  * Valida as propriedades de um comando
@@ -245,7 +245,6 @@ function validateCommands(commands, errors = [], text = '', commandOccurrences =
   return errors;
 }
 
-// Busca comando similar por distância de Levenshtein (tolerância proporcional ao tamanho)
 function findSimilarCommandName(typo) {
   let bestMatch = null;
   let minDistance = Infinity;
@@ -261,31 +260,6 @@ function findSimilarCommandName(typo) {
   });
 
   return bestMatch;
-}
-
-// Distância de Levenshtein simples para sugerir comandos próximos
-function levenshteinDistance(a, b) {
-  const matrix = Array.from({ length: b.length + 1 }, (_, i) => [i]);
-
-  for (let j = 0; j <= a.length; j++) {
-    matrix[0][j] = j;
-  }
-
-  for (let i = 1; i <= b.length; i++) {
-    for (let j = 1; j <= a.length; j++) {
-      if (b.charAt(i - 1) === a.charAt(j - 1)) {
-        matrix[i][j] = matrix[i - 1][j - 1];
-      } else {
-        matrix[i][j] = Math.min(
-          matrix[i - 1][j - 1] + 1, // substituição
-          matrix[i][j - 1] + 1, // inserção
-          matrix[i - 1][j] + 1 // deleção
-        );
-      }
-    }
-  }
-
-  return matrix[b.length][a.length];
 }
 
 /**
