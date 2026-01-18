@@ -3,9 +3,7 @@
  */
 
 const TAG_ONE_OF = ['smoke', 'functional'];
-
-const NAME_PATTERN = /^\[.+\]\s-\s.+$/; // [testKeyZephyrScale] - Nome do teste
-
+const NAME_PATTERN = /^\[.+\]\s-\s.+$/;
 const VALID_PROPERTIES = ['appId', 'tags', 'name', 'onFlowStart', 'onFlowComplete', 'env'];
 
 const VALID_COMMANDS = [
@@ -42,12 +40,8 @@ const VALID_COMMANDS = [
 ];
 
 const WHEN_PROPERTIES = ['platform', 'visible', 'notVisible', 'true'];
-
-// Propriedades que devem estar no mesmo nível de 'when', não dentro dele
 const SIBLING_PROPERTIES = ['commands', 'file', 'env'];
-
 const VALID_PLATFORMS = ['android', 'ios', 'web'];
-
 const COMMAND_PROPERTIES = {
   tapOn: {
     properties: [],
@@ -63,7 +57,8 @@ const COMMAND_PROPERTIES = {
       'above',
       'optional',
       'enabled',
-      'when'
+      'when',
+      'rightOf'
     ],
     requiresValue: true
   },
@@ -167,7 +162,7 @@ const COMMAND_PROPERTIES = {
   },
   runScript: {
     properties: [],
-    optional: [],
+    optional: ['file', 'env', 'when'],
     requiresValue: true
   },
   takeScreenshot: {
@@ -184,7 +179,7 @@ const COMMAND_PROPERTIES = {
   },
   launchApp: {
     properties: [],
-    optional: []
+    optional: ['clearState', 'arguments']
   },
   clearState: {
     properties: [],
@@ -232,3 +227,4 @@ module.exports = {
   VALID_PLATFORMS,
   COMMAND_PROPERTIES
 };
+ 

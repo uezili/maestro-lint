@@ -1,7 +1,5 @@
-/**
- * Funções de validação para o Maestro Linter
- */
-
+const fs = require('fs');
+const path = require('path');
 const { VALID_COMMANDS, COMMAND_PROPERTIES, WHEN_PROPERTIES, SIBLING_PROPERTIES } = require('./constants');
 const { isValidPlatform, findLineNumber } = require('./helpers');
 
@@ -18,13 +16,11 @@ function validateCommandProperties(commandName, commandValue, text, occurrence =
   const schema = COMMAND_PROPERTIES[commandName];
 
   if (!schema) {
-    return errors; // Comando não tem schema definido
+    return errors;
   }
 
-  // Se o comando tem valor null ou undefined
   if (commandValue === null || commandValue === undefined) {
     const lineNumber = text ? findLineNumber(text, commandName, null, occurrence) : null;
-    // Se o schema requer propriedades obrigatórias, reporta erro
     if (schema.properties && schema.properties.length > 0) {
       errors.push(
         lineNumber
@@ -33,21 +29,16 @@ function validateCommandProperties(commandName, commandValue, text, occurrence =
       );
       return errors;
     }
-    // Se o schema requer um valor direto (requiresValue), reporta erro
     if (schema.requiresValue) {
       errors.push(
-        lineNumber
-          ? `Linha ${lineNumber}: ${commandName} requer um valor.`
-          : `${commandName}: requer um valor.`
+        lineNumber ? `Linha ${lineNumber}: ${commandName} requer um valor.` : `${commandName}: requer um valor.`
       );
       return errors;
     }
     return errors;
   }
 
-  // Se o comando tem um valor simples (string ou número)
   if (typeof commandValue === 'string' || typeof commandValue === 'number') {
-    // Valida se não está vazio
     if (!commandValue || (typeof commandValue === 'string' && commandValue.trim() === '')) {
       const lineNumber = text ? findLineNumber(text, commandName, null, occurrence) : null;
       errors.push(
@@ -59,15 +50,12 @@ function validateCommandProperties(commandName, commandValue, text, occurrence =
     return errors;
   }
 
-  // Se o comando é um objeto, valida as propriedades
   if (typeof commandValue === 'object' && commandValue !== null) {
     const cmdKeys = Object.keys(commandValue);
     const validKeys = [...(schema.properties || []), ...(schema.optional || [])];
 
-    // Verifica propriedades inválidas
     cmdKeys.forEach(key => {
       if (!validKeys.includes(key)) {
-        // Busca pela propriedade inválida como contexto
         const lineNumber = text ? findLineNumber(text, key) : null;
         errors.push(
           lineNumber
@@ -77,11 +65,9 @@ function validateCommandProperties(commandName, commandValue, text, occurrence =
       }
     });
 
-    // Valida propriedades obrigatórias
     if (schema.properties && schema.properties.length > 0) {
       const hasAnyRequired = schema.properties.some(prop => commandValue[prop] !== undefined);
       if (!hasAnyRequired) {
-        // Se há propriedades inválidas no comando, usa uma delas como contexto
         const invalidKey = cmdKeys.find(k => !validKeys.includes(k));
         const lineNumber = text ? findLineNumber(text, invalidKey || commandName, null, occurrence) : null;
         errors.push(
@@ -91,7 +77,6 @@ function validateCommandProperties(commandName, commandValue, text, occurrence =
         );
       }
 
-      // Valida seletores não vazios
       schema.properties.forEach(prop => {
         if (commandValue[prop] !== undefined && (!commandValue[prop] || commandValue[prop].toString().trim() === '')) {
           const lineNumber = text ? findLineNumber(text, commandName, null, occurrence) : null;
@@ -104,17 +89,13 @@ function validateCommandProperties(commandName, commandValue, text, occurrence =
       });
     }
 
-    // Se requer valor mas nenhum foi fornecido
     if (schema.requiresValue && (!commandValue || Object.keys(commandValue).length === 0)) {
       const lineNumber = text ? findLineNumber(text, commandName, null, occurrence) : null;
       errors.push(
-        lineNumber
-          ? `Linha ${lineNumber}: ${commandName} requer um valor.`
-          : `${commandName}: requer um valor.`
+        lineNumber ? `Linha ${lineNumber}: ${commandName} requer um valor.` : `${commandName}: requer um valor.`
       );
     }
 
-    // Valida propriedades aninhadas 'when'
     if (commandValue.when) {
       const whenErrors = validateWhenProperty(commandValue.when, text, commandName, occurrence);
       errors.push(...whenErrors);
@@ -145,20 +126,20 @@ function validateWhenProperty(whenValue, text, commandName = null, commandOccurr
 
   const whenKeys = Object.keys(whenValue);
 
-  // Verifica propriedades inválidas em 'when'
   whenKeys.forEach(key => {
-    // Verifica se é uma propriedade que deveria estar no nível do comando, não dentro de 'when'
     if (SIBLING_PROPERTIES.includes(key)) {
-      const lineNumber =
-        text ? findLineNumber(text, key, commandName, commandOccurrence) || findLineNumber(text, key) : null;
+      const lineNumber = text
+        ? findLineNumber(text, key, commandName, commandOccurrence) || findLineNumber(text, key)
+        : null;
       const safeLine = lineNumber !== null ? lineNumber : '?';
       errors.push(`Linha ${safeLine}: propriedade "${key}" está no nível errado (deve estar fora de 'when').`);
       return;
     }
 
     if (!WHEN_PROPERTIES.includes(key)) {
-      const lineNumber =
-        text ? findLineNumber(text, key, commandName, commandOccurrence) || findLineNumber(text, key) : null;
+      const lineNumber = text
+        ? findLineNumber(text, key, commandName, commandOccurrence) || findLineNumber(text, key)
+        : null;
       const safeLine = lineNumber !== null ? lineNumber : '?';
       errors.push(
         `Linha ${safeLine}: propriedade inválida "${key}" em 'when' (válidas: ${WHEN_PROPERTIES.join(', ')}).`
@@ -166,7 +147,6 @@ function validateWhenProperty(whenValue, text, commandName = null, commandOccurr
     }
   });
 
-  // platform: android | ios | web
   if (whenValue.platform) {
     if (typeof whenValue.platform !== 'string') {
       const lineNumber = text ? findLineNumber(text, 'platform', commandName, commandOccurrence) : null;
@@ -179,7 +159,6 @@ function validateWhenProperty(whenValue, text, commandName = null, commandOccurr
     }
   }
 
-  // visible / notVisible: exigem matcher não vazio
   ['visible', 'notVisible'].forEach(prop => {
     if (whenValue[prop] !== undefined) {
       const val = whenValue[prop];
@@ -190,7 +169,6 @@ function validateWhenProperty(whenValue, text, commandName = null, commandOccurr
     }
   });
 
-  // true: exige valor truthy / não vazio
   if (whenValue.true !== undefined) {
     const val = whenValue.true;
     const isEmptyString = typeof val === 'string' && val.trim() === '';
@@ -224,21 +202,24 @@ function validateCommands(commands, errors = [], text = '', commandOccurrences =
     const commandKeys = Object.keys(cmd);
     const commandName = commandKeys[0];
 
-    // Incrementa ocorrência do comando
     commandOccurrences[commandName] = (commandOccurrences[commandName] || 0) + 1;
 
-    // Valida o nome do comando
     if (!VALID_COMMANDS.includes(commandName)) {
-      // Busca um comando válido com capitalização similar
-      const similarCommand = VALID_COMMANDS.find(
-        vc => vc.toLowerCase() === commandName.toLowerCase()
-      );
+      const similarCommand = VALID_COMMANDS.find(vc => vc.toLowerCase() === commandName.toLowerCase());
+      const closeMatch = findSimilarCommandName(commandName);
       const lineNumber = text ? findLineNumber(text, commandName) : null;
+
       if (similarCommand) {
         errors.push(
           lineNumber
             ? `Linha ${lineNumber}: comando com sintaxe incorreta: "${commandName}" deveria ser "${similarCommand}".`
             : `Comando com sintaxe incorreta: "${commandName}" deveria ser "${similarCommand}".`
+        );
+      } else if (closeMatch) {
+        errors.push(
+          lineNumber
+            ? `Linha ${lineNumber}: comando inválido "${commandName}", correto: "${closeMatch}"?`
+            : `Comando inválido "${commandName}", correto: "${closeMatch}"?`
         );
       } else {
         errors.push(
@@ -250,12 +231,10 @@ function validateCommands(commands, errors = [], text = '', commandOccurrences =
       return;
     }
 
-    // Valida as propriedades do comando
     const commandValue = cmd[commandName];
     const propErrors = validateCommandProperties(commandName, commandValue, text, commandOccurrences[commandName]);
     errors.push(...propErrors);
 
-    // Valida comandos aninhados (runFlow, repeat, retry, etc)
     if (typeof commandValue === 'object' && commandValue !== null) {
       if (commandValue.commands && Array.isArray(commandValue.commands)) {
         validateCommands(commandValue.commands, errors, text, commandOccurrences);
@@ -266,8 +245,172 @@ function validateCommands(commands, errors = [], text = '', commandOccurrences =
   return errors;
 }
 
+// Busca comando similar por distância de Levenshtein (tolerância proporcional ao tamanho)
+function findSimilarCommandName(typo) {
+  let bestMatch = null;
+  let minDistance = Infinity;
+
+  VALID_COMMANDS.forEach(validCmd => {
+    const distance = levenshteinDistance(typo.toLowerCase(), validCmd.toLowerCase());
+    const maxAllowedDistance = Math.max(1, Math.floor(validCmd.length * 0.3));
+
+    if (distance <= maxAllowedDistance && distance < minDistance) {
+      minDistance = distance;
+      bestMatch = validCmd;
+    }
+  });
+
+  return bestMatch;
+}
+
+// Distância de Levenshtein simples para sugerir comandos próximos
+function levenshteinDistance(a, b) {
+  const matrix = Array.from({ length: b.length + 1 }, (_, i) => [i]);
+
+  for (let j = 0; j <= a.length; j++) {
+    matrix[0][j] = j;
+  }
+
+  for (let i = 1; i <= b.length; i++) {
+    for (let j = 1; j <= a.length; j++) {
+      if (b.charAt(i - 1) === a.charAt(j - 1)) {
+        matrix[i][j] = matrix[i - 1][j - 1];
+      } else {
+        matrix[i][j] = Math.min(
+          matrix[i - 1][j - 1] + 1, // substituição
+          matrix[i][j - 1] + 1, // inserção
+          matrix[i - 1][j] + 1 // deleção
+        );
+      }
+    }
+  }
+
+  return matrix[b.length][a.length];
+}
+
+/**
+ * Valida indentação excessiva em properties de when: (que js-yaml não consegue detectar)
+ * @param {string} text - Texto completo do arquivo
+ * @returns {string[]} Array de erros encontrados
+ */
+function validateWhenPropertyIndentation(text) {
+  const errors = [];
+  const lines = text.split('\n');
+
+  for (let i = 0; i < lines.length - 1; i++) {
+    const line = lines[i];
+    const whenMatch = /^\s+when:\s*$/.test(line);
+
+    if (whenMatch) {
+      const whenIndent = /^(\s*)/.exec(line)[1].length;
+      const expectedIndent = whenIndent + 2;
+      const nextLine = lines[i + 1];
+      const nextLineIndent = /^(\s*)/.exec(nextLine)[1].length;
+      const isProperty = /^(\s*)([\w-]+):/.test(nextLine);
+
+      if (isProperty) {
+        if (nextLineIndent !== expectedIndent) {
+          const propertyName = /^(\s*)([\w-]+):/.exec(nextLine)[2];
+          errors.push(
+            `Linha ${i + 2}: Indentação incorreta em propriedade '${propertyName}' sob 'when:'. Esperado ${expectedIndent} espaços, encontrado ${nextLineIndent}.`
+          );
+        }
+      }
+    }
+  }
+
+  return errors;
+}
+
+/**
+ * Valida caminhos de arquivos em runScript e runFlow
+ * @param {string} text - Texto completo do arquivo
+ * @param {string} currentFilePath - Caminho do arquivo sendo validado
+ * @returns {string[]} Array de erros encontrados
+ */
+function validateFilePaths(text, currentFilePath) {
+  const errors = [];
+  const lines = text.split('\n');
+  const currentDir = path.dirname(currentFilePath);
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    const inlineScriptMatch = line.match(/^\s*-?\s*runScript:\s*['"]?([^'"#\n]+?)['"]?\s*$/);
+    const inlineFlowMatch = line.match(/^\s*-?\s*runFlow:\s*['"]?([^'"#\n]+?)['"]?\s*$/);
+
+    if (inlineScriptMatch) {
+      const filePath = inlineScriptMatch[1].trim();
+      validateFileExists(filePath, currentDir, i + 1, 'runScript', errors);
+    }
+
+    if (inlineFlowMatch) {
+      const filePath = inlineFlowMatch[1].trim();
+      validateFileExists(filePath, currentDir, i + 1, 'runFlow', errors);
+    }
+
+    const runFlowMatch = line.match(/^\s*-?\s*runFlow:\s*$/);
+    if (runFlowMatch && i + 1 < lines.length) {
+      for (let j = i + 1; j < Math.min(i + 10, lines.length); j++) {
+        const nextLine = lines[j];
+        const fileMatch = nextLine.match(/^\s*file:\s*['"]?([^'"#\n]+?)['"]?\s*$/);
+
+        if (fileMatch) {
+          const filePath = fileMatch[1].trim();
+          validateFileExists(filePath, currentDir, j + 1, 'runFlow', errors);
+          break;
+        }
+
+        if (/^\s*-\s*\w+:/.test(nextLine)) {
+          break;
+        }
+      }
+    }
+  }
+
+  return errors;
+}
+
+/**
+ * Valida se um arquivo existe
+ * @param {string} filePath - Caminho do arquivo a verificar
+ * @param {string} baseDir - Diretório base para resolver caminhos relativos
+ * @param {number} lineNumber - Número da linha onde o caminho foi encontrado
+ * @param {string} commandType - Tipo do comando (runScript ou runFlow)
+ * @param {string[]} errors - Array para adicionar erros
+ */
+function validateFileExists(filePath, baseDir, lineNumber, commandType, errors) {
+  if (filePath.includes('${')) {
+    return;
+  }
+
+  const absolutePath = path.resolve(baseDir, filePath);
+
+  if (!fs.existsSync(absolutePath)) {
+    const ext = path.extname(filePath);
+    let found = false;
+
+    if (!ext) {
+      const extensions = commandType === 'runScript' ? ['.js'] : ['.yaml', '.yml'];
+
+      for (const extension of extensions) {
+        if (fs.existsSync(absolutePath + extension)) {
+          found = true;
+          break;
+        }
+      }
+    }
+
+    if (!found) {
+      errors.push(`Linha ${lineNumber}: Arquivo não encontrado: "${filePath}"`);
+    }
+  }
+}
+
 module.exports = {
   validateCommandProperties,
   validateWhenProperty,
-  validateCommands
+  validateCommands,
+  validateWhenPropertyIndentation,
+  validateFilePaths
 };
+ 
