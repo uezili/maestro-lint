@@ -152,11 +152,36 @@ function levenshteinDistance(a, b) {
   return matrix[b.length][a.length];
 }
 
+/**
+ * Encontra string similar usando distância de Levenshtein
+ * @param {string} typo - String com possível erro
+ * @param {string[]} validStrings - Lista de strings válidas
+ * @param {number} tolerancePercentage - Percentual de tolerância (padrão: 0.3 = 30%)
+ * @returns {string|null} String válida mais similar ou null
+ */
+function findSimilarString(typo, validStrings, tolerancePercentage = 0.3) {
+  let bestMatch = null;
+  let minDistance = Infinity;
+
+  for (const validStr of validStrings) {
+    const distance = levenshteinDistance(typo.toLowerCase(), validStr.toLowerCase());
+    const maxAllowedDistance = Math.floor(validStr.length * tolerancePercentage);
+
+    if (distance <= maxAllowedDistance && distance < minDistance) {
+      minDistance = distance;
+      bestMatch = validStr;
+    }
+  }
+
+  return bestMatch;
+}
+
 module.exports = {
   isValidPlatform,
   extractFlowPath,
   findLineNumber,
   normalizeFlowPath,
   isValidFlowPath,
-  levenshteinDistance
+  levenshteinDistance,
+  findSimilarString
 };

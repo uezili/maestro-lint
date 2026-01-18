@@ -5,9 +5,10 @@ const fg = require('fast-glob');
 
 const { TAG_ONE_OF, NAME_PATTERN, VALID_PROPERTIES } = require('./src/constants');
 
-const { extractFlowPath, findLineNumber, isValidFlowPath, levenshteinDistance } = require('./src/helpers');
+const { extractFlowPath, findLineNumber, isValidFlowPath, findSimilarString } = require('./src/helpers');
 const { validateCommands, validateWhenPropertyIndentation, validateFilePaths } = require('./src/validators');
 const { detectMultipleParsingErrors } = require('./src/yamlError');
+const { ERROR_MESSAGES } = require('./src/messages');
 
 /**
  * Detecta se um arquivo é um subflow
@@ -50,40 +51,17 @@ function validateCommandsByPattern(text, errors) {
     const similar = VALID_COMMANDS.find(cmd => cmd.toLowerCase() === commandName.toLowerCase());
 
     if (similar) {
-      errors.push(`Linha ${lineNumber}: Comando com sintaxe incorreta "${commandName}" deveria ser "${similar}".`);
+      errors.push(ERROR_MESSAGES.COMMAND_CASE_SENSITIVE(commandName, similar, lineNumber));
     } else {
-      const closeMatch = findSimilarCommand(commandName, VALID_COMMANDS);
+      const closeMatch = findSimilarString(commandName, VALID_COMMANDS);
 
       if (closeMatch) {
-        errors.push(`Linha ${lineNumber}: Comando inválido "${commandName}", correto: "${closeMatch}"?`);
+        errors.push(ERROR_MESSAGES.COMMAND_INVALID_WITH_SUGGESTION(commandName, closeMatch, lineNumber));
       } else {
-        errors.push(`Linha ${lineNumber}: Comando inválido ou não reconhecido: "${commandName}".`);
+        errors.push(ERROR_MESSAGES.COMMAND_INVALID(commandName, lineNumber));
       }
     }
   }
-}
-
-/**
- * Encontra comando similar usando distância de Levenshtein
- * @param {string} typo - Comando com erro de digitação
- * @param {string[]} validCommands - Lista de comandos válidos
- * @returns {string|null} Comando válido mais similar ou null
- */
-function findSimilarCommand(typo, validCommands) {
-  let bestMatch = null;
-  let minDistance = Infinity;
-
-  for (const validCmd of validCommands) {
-    const distance = levenshteinDistance(typo.toLowerCase(), validCmd.toLowerCase());
-    const maxAllowedDistance = Math.floor(validCmd.length * 0.3);
-
-    if (distance <= maxAllowedDistance && distance < minDistance) {
-      minDistance = distance;
-      bestMatch = validCmd;
-    }
-  }
-
-  return bestMatch;
 }
 
 /**
@@ -119,7 +97,7 @@ function validatePropertiesByPattern(text, errors) {
 
     if (PROPERTY_TYPO_MAP[propName]) {
       errors.push(
-        `Linha ${lineNumber}: Propriedade com erro de digitação "${propName}" deveria ser "${PROPERTY_TYPO_MAP[propName]}".`
+        ERROR_MESSAGES.PROPERTY_TYPO(propName, PROPERTY_TYPO_MAP[propName], lineNumber)
       );
     }
   }
@@ -136,12 +114,12 @@ function lintFile(filePath) {
   const isSubflowFile = isSubflow(filePath);
 
   if (!text.includes('appId:')) {
-    errors.push('Parâmetro appId ausente (identificador da aplicação).');
+    errors.push(ERROR_MESSAGES.APPID_MISSING);
   }
 
   const docs = text.split('---');
   if (docs.length < 1) {
-    errors.push('Arquivo YAML vazio ou inválido.');
+    errors.push(ERROR_MESSAGES.FILE_EMPTY);
     return errors;
   }
 
@@ -152,7 +130,7 @@ function lintFile(filePath) {
     doc = yaml.load(docs[0]);
 
     if (!doc) {
-      errors.push('Arquivo YAML vazio ou inválido.');
+      errors.push(ERROR_MESSAGES.FILE_EMPTY);
       parsingError = true;
     }
   } catch (error) {
