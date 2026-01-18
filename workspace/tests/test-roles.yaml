@@ -1,0 +1,252 @@
+appId: com.maestro.test.comprehensive
+
+tags:
+  - smoke
+  - wip
+
+name: '[TEST-COMPREHENSIVE] - Validação Completa de Todas as Regras do Linter'
+
+onFlowStart:
+  - runFlow: '../../common/subflows/setup.yaml'
+
+onFlowComplete:
+  - runFlow: '../../common/subflows/teardown.yaml'
+
+---
+# ============================================================================
+# SEÇÃO 1: VALIDAÇÃO DE COMANDOS BÁSICOS E SELETORES
+# ============================================================================
+
+# ✅ Comando válido com seletor simples (string)
+- tapOn: 'Botão Login'
+
+# ✅ Comando com seletor regex
+- tapOn: '.*Entendi.*'
+
+# ✅ Comando com ponto (coordenadas)
+- tapOn:
+    point: '50%, 50%'
+
+# ✅ Comando com ID
+- tapOn:
+    id: 'button_login'
+
+# ✅ Comando com propriedade 'when'
+- tapOn:
+    text: 'Enviar'
+    when:
+      platform: android
+
+# ============================================================================
+# SEÇÃO 2: VALIDAÇÃO DE PRESSKEY COM VALORES ESPECÍFICOS
+# ============================================================================
+
+# ✅ pressKey com valores válidos
+- pressKey: enter
+- pressKey: backspace
+- pressKey: 'volume up'
+- pressKey: back
+- pressKey: home
+
+# ============================================================================
+# SEÇÃO 3: VALIDAÇÃO DE SCROLL E SWIPE COM DIREÇÕES
+# ============================================================================
+
+# ✅ Scroll simples
+- scroll
+
+# ✅ scrollUntilVisible com direção válida
+- scrollUntilVisible:
+    element:
+      text: 'Elemento procurado'
+    direction: DOWN
+    timeout: 5000
+    speed: 50
+
+# ✅ scrollUntilVisible com validações de range
+- scrollUntilVisible:
+    element:
+      id: 'scrollable_view'
+    speed: 75
+    visibilityPercentage: 100
+
+# ✅ Swipe com coordenadas válidas
+- swipe:
+    start: '90%, 50%'
+    end: '10%, 50%'
+
+# ============================================================================
+# SEÇÃO 4: VALIDAÇÃO DE REPEAT E RETRY COM PROPRIEDADES
+# ============================================================================
+
+# ✅ Repeat com times (número válido)
+- repeat:
+    times: 3
+    commands:
+      - tapOn: 'Botão'
+
+# ✅ Retry com maxRetries
+- retry:
+    maxRetries: 5
+    commands:
+      - tapOn: 'Elemento instável'
+
+# ============================================================================
+# SEÇÃO 5: VALIDAÇÃO DE WAITFORANIMATIONTOEND
+# ============================================================================
+
+# ✅ Wait com timeout
+- waitForAnimationToEnd:
+    timeout: 2000
+
+# ============================================================================
+# SEÇÃO 6: VALIDAÇÃO DE WHEN COM MÚLTIPLAS PROPRIEDADES
+# ============================================================================
+
+# ✅ When com platform e visible combinadas
+- tapOn:
+    text: 'Botão iOS'
+    when:
+      platform: ios
+      visible: '.*Button.*'
+
+# ✅ When com platform e notVisible
+- assertNotVisible:
+    text: 'Loading'
+    when:
+      platform: android
+      notVisible: 'progress_bar'
+
+# ✅ When com condição true
+- runFlow:
+    file: '../../common/subflows/content-wait.yaml'
+    when:
+      true: '${MOBILE_TOKEN}'
+
+# ============================================================================
+# SEÇÃO 7: VALIDAÇÃO DE EXTENDEDWAITUNTIL
+# ============================================================================
+
+# ✅ extendedWaitUntil com visible
+- extendedWaitUntil:
+    visible: 'Conteúdo carregado'
+    timeout: 10000
+
+# ✅ extendedWaitUntil com notVisible
+- extendedWaitUntil:
+    notVisible: 'Loading spinner'
+    timeout: 8000
+
+# ============================================================================
+# SEÇÃO 8: VALIDAÇÃO DE ASSERTVISIBLE E ASSERTNOTVISIBLE
+# ============================================================================
+
+# ✅ assertVisible simples
+- assertVisible: 'Bem-vindo'
+
+# ✅ assertVisible com propriedades
+- assertVisible:
+    text: 'Button'
+    enabled: true
+
+# ✅ assertNotVisible
+- assertNotVisible: 'Error message'
+
+# ============================================================================
+# SEÇÃO 9: VALIDAÇÃO DE COPYTEXTFROM
+# ============================================================================
+
+# ✅ copyTextFrom com valor simples
+- copyTextFrom: 'saldo_value'
+
+# ✅ copyTextFrom com propriedades
+- copyTextFrom:
+    id: 'account_number'
+
+# ============================================================================
+# SEÇÃO 10: VALIDAÇÃO DE INPUT/ERASE/PASTE
+# ============================================================================
+
+# ✅ inputText
+- inputText: '12345678900'
+
+# ✅ eraseText
+- eraseText
+
+# ✅ pasteText
+- pasteText
+
+# ============================================================================
+# SEÇÃO 11: VALIDAÇÃO DE RUNFLOW COM DIFERENTES CAMINHOS
+# ============================================================================
+
+# ✅ runFlow com caminho absoluto
+- runFlow:
+    file: 'workspace/common/subflows/access-menu-subflow.yaml'
+    env:
+      PRODUCT: pix
+
+# ✅ runFlow com caminho relativo
+- runFlow:
+    file: '../../common/subflows/access-menu-subflow.yaml'
+
+# ✅ runFlow com commands aninhados
+- runFlow:
+    commands:
+      - tapOn: 'Menu'
+      - assertVisible: 'Opções'
+
+# ============================================================================
+# SEÇÃO 12: VALIDAÇÃO DE RUNSCRIPT E EVALSCRIPT
+# ============================================================================
+
+# ✅ runScript
+- runScript: 'create-test-data.js'
+
+# ✅ evalScript
+- evalScript: "${output.result = 'Hello'.toUpperCase()}"
+
+# ============================================================================
+# SEÇÃO 13: VALIDAÇÃO DE OUTROS COMANDOS
+# ============================================================================
+
+# ✅ takeScreenshot
+- takeScreenshot:
+    path: 'login_screen'
+
+# ✅ assertTrue
+- assertTrue:
+    condition: "${output.result == 'success'}"
+    label: 'Verificar se resultado é sucesso'
+
+# ✅ launchApp
+- launchApp
+
+# ✅ killApp
+- killApp
+
+# ✅ stopApp
+- stopApp
+
+# ✅ clearState
+- clearState
+
+# ✅ clearKeychain
+- clearKeychain
+
+# ✅ back
+- back
+
+# ✅ hide
+- hide
+
+# ✅ openLink
+- openLink: 'https://example.com'
+
+# ✅ doubleTapOn
+- doubleTapOn: 'Elemento'
+
+# ✅ longPressOn
+- longPressOn:
+    text: 'Elemento'
+    delay: 500
