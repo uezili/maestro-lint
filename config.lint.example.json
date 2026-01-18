@@ -1,0 +1,46 @@
+{
+  "$schema": "./config.schema.json",
+  "description": "Exemplo de configuração customizada - desabilitando algumas regras",
+  "rules": {
+    "requiredTags": {
+      "enabled": true,
+      "allowedTags": [
+        "smoke",
+        "functional",
+        "regression"
+      ],
+      "message": "Tag obrigatória ausente. Use: smoke, functional ou regression."
+    },
+    "validProperties": {
+      "enabled": true,
+      "properties": [
+        "appId",
+        "tags",
+        "onFlowStart",
+        "onFlowComplete",
+        "env",
+        "name"
+      ]
+    },
+    "requiredAppId": {
+      "enabled": true,
+      "message": "O parâmetro appId é obrigatório!"
+    },
+    "requiredSetup": {
+      "enabled": false,
+      "message": "onFlowStart deve incluir setup.yaml",
+      "expectedFile": "setup.yaml"
+    },
+    "requiredTeardown": {
+      "enabled": false,
+      "message": "onFlowComplete deve incluir teardown.yaml",
+      "expectedFile": "teardown.yaml"
+    },
+    "validateCommands": {
+      "enabled": true
+    },
+    "validateFilePaths": {
+      "enabled": true
+    }
+  }
+}

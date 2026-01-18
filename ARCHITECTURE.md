@@ -22,7 +22,6 @@ maestro-lint/
 Contém todas as constantes e configurações do linter:
 
 - `TAG_ONE_OF` - Tags válidas (smoke, functional)
-- `NAME_PATTERN` - Padrão do parâmetro name
 - `VALID_PROPERTIES` - Propriedades válidas no cabeçalho
 - `VALID_COMMANDS` - Comandos Maestro válidos
 - `WHEN_PROPERTIES` - Propriedades válidas em 'when'
