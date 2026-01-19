@@ -1,12 +1,8 @@
 const ValidationError = require('./ValidationError');
 const { findLineNumber } = require('../helpers');
-const { ERROR_MESSAGES, ARRAY_COMMAND_MESSAGES } = require('../messages');
+const { ARRAY_COMMAND_MESSAGES } = require('../messages');
 const { MEDIA_EXTENSIONS } = require('../constants');
 
-/**
- * Validador para comandos que recebem arrays como valor (ex: addMedia)
- * Responsabilidade: Validar estrutura e itens de comandos baseados em array
- */
 class ArrayCommandValidator {
   /**
    * Valida comando que é um array
