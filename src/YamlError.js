@@ -1,4 +1,5 @@
 const yaml = require('js-yaml');
+const { LIMITS } = require('./constants');
 
 /**
  * Detecta erros em um documento YAML específico com múltiplas tentativas
@@ -10,11 +11,10 @@ function detectErrorsInDocument(docText, lineOffset = 0) {
   const errors = [];
   let currentText = docText;
   let iterations = 0;
-  const maxIterations = 50;
   const problemLines = new Set();
   const reportedLines = new Set();
 
-  while (iterations < maxIterations) {
+  while (iterations < LIMITS.MAX_YAML_PARSE_ITERATIONS) {
     iterations++;
 
     try {

@@ -1,6 +1,14 @@
 const fs = require('fs');
+const path = require('path');
 const yaml = require('js-yaml');
-const { detectMultipleParsingErrors } = require('./yamlError');
+const { detectMultipleParsingErrors } = require('./YamlError');
+const ErrorSeverityConverter = require('./ErrorSeverityConverter');
+const ValidationError = require('./validators/ValidationError');
+const ConfigManager = require('./ConfigManager');
+const RuleDetector = require('./RuleDetector');
+const { VALID_COMMANDS, LIMITS, PROPERTY_TYPO_MAP } = require('./constants');
+const { findSimilarString } = require('./helpers');
+const { commandValidator, headerValidator } = require('./validators/index');
 
 const SUBFLOW_PATTERN = /\/subflows\//;
 
@@ -57,7 +65,20 @@ class LintEngine {
       errors.push(`Erro ao processar arquivo: ${error.message}`);
     }
 
-    return errors;
+    // Converter erros para objetos com severidade
+    return errors.map(error => {
+      if (typeof error === 'string') {
+        return ErrorSeverityConverter.convert(error, 'command', 'invalidCommand');
+      }
+      if (error instanceof ValidationError) {
+        const { category, ruleType } = RuleDetector.detect(error.message);
+        const severity = ConfigManager.getSeverity(category, ruleType);
+        error.severity = severity;
+        error.ruleCategory = category;
+        error.ruleType = ruleType;
+      }
+      return error;
+    });
   }
 
   /**
@@ -65,34 +86,7 @@ class LintEngine {
    * @private
    */
   _validateHeader(headerDoc, text) {
-    const errors = [];
-    const { VALID_PROPERTIES, TAG_ONE_OF } = require('./constants');
-    const { findLineNumber } = require('./helpers');
-
-    // Validar propriedades
-    const docKeys = Object.keys(headerDoc);
-    for (const key of docKeys) {
-      if (!VALID_PROPERTIES.includes(key)) {
-        const similarProp = VALID_PROPERTIES.find(vp => vp.toLowerCase() === key.toLowerCase());
-        const lineNumber = findLineNumber(text, key);
-        if (similarProp) {
-          errors.push(
-            lineNumber
-              ? `Linha ${lineNumber}: propriedade com sintaxe incorreta: "${key}" deveria ser "${similarProp}".`
-              : `Propriedade com sintaxe incorreta: "${key}" deveria ser "${similarProp}".`
-          );
-        } else {
-          errors.push(`Propriedade inválida no cabeçalho: "${key}"${lineNumber ? ` (Linha ${lineNumber})` : ''}`);
-        }
-      }
-    }
-
-    const tags = headerDoc.tags || [];
-    if (!TAG_ONE_OF.some(t => tags.includes(t))) {
-      errors.push('Tag de classificação ausente (smoke ou functional).');
-    }
-
-    return errors;
+    return headerValidator.validate(headerDoc, text);
   }
 
   /**
@@ -101,21 +95,24 @@ class LintEngine {
    */
   _validateFlowCommands(headerDoc, text) {
     const errors = [];
-    const { validateCommands } = require('./validators');
     const docKeys = Object.keys(headerDoc);
 
-    const onFlowStartProp = headerDoc.onFlowStart ||
-      docKeys.find(k => k.toLowerCase() === 'onflowstart') && headerDoc[docKeys.find(k => k.toLowerCase() === 'onflowstart')];
+    const onFlowStartProp =
+      headerDoc.onFlowStart ||
+      (docKeys.find(k => k.toLowerCase() === 'onflowstart') &&
+        headerDoc[docKeys.find(k => k.toLowerCase() === 'onflowstart')]);
 
-    const onFlowCompleteProp = headerDoc.onFlowComplete ||
-      docKeys.find(k => k.toLowerCase() === 'onflowcomplete') && headerDoc[docKeys.find(k => k.toLowerCase() === 'onflowcomplete')];
+    const onFlowCompleteProp =
+      headerDoc.onFlowComplete ||
+      (docKeys.find(k => k.toLowerCase() === 'onflowcomplete') &&
+        headerDoc[docKeys.find(k => k.toLowerCase() === 'onflowcomplete')]);
 
     if (onFlowStartProp && Array.isArray(onFlowStartProp)) {
-      validateCommands(onFlowStartProp, errors, text);
+      errors.push(...commandValidator.validate(onFlowStartProp, text));
     }
 
     if (onFlowCompleteProp && Array.isArray(onFlowCompleteProp)) {
-      validateCommands(onFlowCompleteProp, errors, text);
+      errors.push(...commandValidator.validate(onFlowCompleteProp, text));
     }
 
     return errors;
@@ -127,13 +124,12 @@ class LintEngine {
    */
   _validateCommandsSection(docs, text, hasParsingError) {
     const errors = [];
-    const { validateCommands } = require('./validators');
 
     if (docs.length > 1) {
       try {
         const commands = yaml.load(docs[1]);
         if (Array.isArray(commands)) {
-          validateCommands(commands, errors, text);
+          errors.push(...commandValidator.validate(commands, text));
         }
       } catch (commandError) {
         errors.push(...this._handleParsingError(commandError, text, docs[1]));
@@ -162,8 +158,6 @@ class LintEngine {
    * @private
    */
   _validateCommandsPattern(text, errors) {
-    const { VALID_COMMANDS } = require('./constants');
-    const { findSimilarString } = require('./helpers');
     const commandPattern = /^\s*-\s+([a-zA-Z]+):/gm;
     let match;
 
@@ -196,18 +190,12 @@ class LintEngine {
    * @private
    */
   _validatePropertiesPattern(text, errors) {
-    const PROPERTY_TYPO_MAP = {
-      pltform: 'platform',
-      visibile: 'visible',
-      notVisibile: 'notVisible'
-    };
-
     const propertyPattern = /([a-zA-Z]+):\s*(\w+)?/gm;
     const reportedProps = new Set();
     let match;
 
     while ((match = propertyPattern.exec(text)) !== null) {
-      const beforeMatch = text.substring(Math.max(0, match.index - 20), match.index);
+      const beforeMatch = text.substring(Math.max(0, match.index - LIMITS.CONTEXT_WINDOW_BEFORE), match.index);
       if (beforeMatch.includes('-')) {
         continue;
       }
@@ -265,7 +253,6 @@ class LintEngine {
    */
   _validateFilePaths(text, currentFilePath) {
     const errors = [];
-    const path = require('path');
     const lines = text.split('\n');
     const currentDir = path.dirname(currentFilePath);
 
@@ -286,7 +273,7 @@ class LintEngine {
 
       const runFlowMatch = line.match(/^\s*-?\s*runFlow:\s*$/);
       if (runFlowMatch && i + 1 < lines.length) {
-        for (let j = i + 1; j < Math.min(i + 10, lines.length); j++) {
+        for (let j = i + 1; j < Math.min(i + LIMITS.MAX_LOOKAHEAD_LINES, lines.length); j++) {
           const nextLine = lines[j];
           const fileMatch = nextLine.match(/^\s*file:\s*['"]?([^'"#\n]+?)['"]?\s*$/);
 
@@ -311,8 +298,6 @@ class LintEngine {
    * @private
    */
   _validateFile(filePath, baseDir, lineNumber, commandType, errors) {
-    const path = require('path');
-
     if (filePath.includes('${')) {
       return;
     }
@@ -349,12 +334,12 @@ class LintEngine {
    * Trata erros de parsing
    * @private
    */
-  _handleParsingError(error, text, docText) {
+  _handleParsingError(error, text, _docText) {
     const errors = [];
     const parsingErrors = detectMultipleParsingErrors(text);
 
     if (parsingErrors.length > 0) {
-      parsingErrors.forEach((err) => {
+      parsingErrors.forEach(err => {
         const lines = err.split('\n');
         const diagram = lines.slice(1).join('\n');
 

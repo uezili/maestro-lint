@@ -1,4 +1,4 @@
-const { VALID_PLATFORMS } = require('./constants');
+const { VALID_PLATFORMS, LIMITS } = require('./constants');
 
 /**
  * Valida se uma plataforma é válida
@@ -51,7 +51,7 @@ function findLineNumber(text, searchTerm, context = null, occurrence = 1) {
         contextOccurrence++;
         if (contextOccurrence === occurrence) {
           const windowStart = i;
-          const windowEnd = Math.min(lines.length, i + 20);
+          const windowEnd = Math.min(lines.length, i + LIMITS.CONTEXT_WINDOW_AFTER);
           for (let j = windowStart; j < windowEnd; j++) {
             if (isCommentOrEmpty(lines[j])) {
               continue;

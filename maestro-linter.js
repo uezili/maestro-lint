@@ -8,6 +8,7 @@
 const lintEngine = require('./src/LintEngine');
 const filesManager = require('./src/FilesManager');
 const resultsPresenter = require('./src/ResultsPresenter');
+const configManager = require('./src/ConfigManager');
 
 /**
  * Executa o linter
@@ -47,9 +48,22 @@ async function main() {
   // Processar arquivos
   let passed = 0;
   let failed = 0;
+  const stats = {
+    errors: 0,
+    warnings: 0,
+    infos: 0
+  };
 
   for (const file of files) {
     const errors = lintEngine.lint(file);
+
+    // Contar por severidade
+    errors.forEach(error => {
+      if (error.severity === 'error') stats.errors++;
+      else if (error.severity === 'warning') stats.warnings++;
+      else if (error.severity === 'info') stats.infos++;
+    });
+
     if (resultsPresenter.displayFileResult(file, errors)) {
       passed++;
     } else {
@@ -58,7 +72,7 @@ async function main() {
   }
 
   // Exibir resultados
-  const isSuccess = resultsPresenter.displayResults(passed, failed, files.length);
+  const isSuccess = resultsPresenter.displayResults(passed, failed, files.length, stats);
   process.exitCode = isSuccess ? 0 : 1;
 }
 

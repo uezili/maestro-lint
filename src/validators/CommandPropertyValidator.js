@@ -1,6 +1,9 @@
 const { COMMAND_PROPERTIES } = require('../constants');
+const { ERROR_MESSAGES } = require('../messages');
 const { findLineNumber } = require('../helpers');
 const ValidationError = require('./ValidationError');
+const nestedObjectValidator = require('./NestedObjectValidator');
+const arrayCommandValidator = require('./ArrayCommandValidator');
 
 class CommandPropertyValidator {
   /**
@@ -29,6 +32,12 @@ class CommandPropertyValidator {
       return errors;
     }
 
+    // Delegar para ArrayCommandValidator (SRP)
+    if (Array.isArray(commandValue)) {
+      errors.push(...arrayCommandValidator.validate(commandName, commandValue, schema, text, occurrence));
+      return errors;
+    }
+
     if (typeof commandValue === 'object' && commandValue !== null) {
       errors.push(...this._validateObjectValue(commandName, commandValue, schema, text, occurrence));
     }
@@ -47,7 +56,7 @@ class CommandPropertyValidator {
     if (schema.properties && schema.properties.length > 0) {
       errors.push(
         new ValidationError(
-          `${commandName} deve ter pelo menos uma propriedade: ${schema.properties.join(' ou ')}.`,
+          ERROR_MESSAGES.COMMAND_REQUIRES_PROPERTY(commandName, schema.properties),
           lineNumber
         )
       );
@@ -57,7 +66,7 @@ class CommandPropertyValidator {
     if (schema.requiresValue) {
       errors.push(
         new ValidationError(
-          `${commandName} requer um valor.`,
+          ERROR_MESSAGES.COMMAND_REQUIRES_VALUE(commandName),
           lineNumber
         )
       );
@@ -77,7 +86,7 @@ class CommandPropertyValidator {
       const lineNumber = text ? findLineNumber(text, commandName, null, occurrence) : null;
       errors.push(
         new ValidationError(
-          `${commandName} seletor/valor não pode estar vazio.`,
+          ERROR_MESSAGES.COMMAND_EMPTY_VALUE(commandName),
           lineNumber
         )
       );
@@ -96,6 +105,10 @@ class CommandPropertyValidator {
     errors.push(...this._validateObjectProperties(commandName, commandValue, schema, text, occurrence));
     errors.push(...this._validateRequiredProperties(commandName, commandValue, schema, text, occurrence));
     errors.push(...this._validatePropertyValues(commandName, commandValue, schema, text, occurrence));
+
+    if (schema.nestedObject) {
+      errors.push(...nestedObjectValidator.validate(commandName, commandValue, schema, text, occurrence));
+    }
 
     if (commandValue.when) {
       const whenValidator = require('./WhenPropertyValidator');
@@ -120,7 +133,7 @@ class CommandPropertyValidator {
         const lineNumber = text ? findLineNumber(text, key) : null;
         errors.push(
           new ValidationError(
-            `${commandName} propriedade inválida "${key}".`,
+            ERROR_MESSAGES.COMMAND_INVALID_PROPERTY(commandName, key),
             lineNumber
           )
         );
@@ -179,26 +192,6 @@ class CommandPropertyValidator {
           );
         }
       }
-    }
-
-    return errors;
-  }
-
-  /**
-   * Valida se requiresValue é satisfeito
-   * @private
-   */
-  _validateRequiresValue(commandName, commandValue, schema, text, _occurrence) {
-    const errors = [];
-
-    if (schema.requiresValue && (!commandValue || Object.keys(commandValue).length === 0)) {
-      const lineNumber = text ? findLineNumber(text, commandName, null, _occurrence) : null;
-      errors.push(
-        new ValidationError(
-          `${commandName} requer um valor.`,
-          lineNumber
-        )
-      );
     }
 
     return errors;
