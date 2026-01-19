@@ -1,4 +1,5 @@
 const { VALID_COMMANDS } = require('../constants');
+const { ERROR_MESSAGES } = require('../messages');
 const { findLineNumber, levenshteinDistance } = require('../helpers');
 const ValidationError = require('./ValidationError');
 const commandPropertyValidator = require('./CommandPropertyValidator');
@@ -77,7 +78,7 @@ class CommandValidator {
     if (similarCommand) {
       errors.push(
         new ValidationError(
-          `comando com sintaxe incorreta: "${commandName}" deveria ser "${similarCommand}".`,
+          ERROR_MESSAGES.COMMAND_TYPO(commandName, similarCommand),
           lineNumber
         )
       );
@@ -88,14 +89,14 @@ class CommandValidator {
     if (closeMatch) {
       errors.push(
         new ValidationError(
-          `comando inválido "${commandName}", correto: "${closeMatch}"?`,
+          ERROR_MESSAGES.COMMAND_INVALID_WITH_SUGGESTION(commandName, closeMatch),
           lineNumber
         )
       );
     } else {
       errors.push(
         new ValidationError(
-          `comando inválido: "${commandName}".`,
+          ERROR_MESSAGES.COMMAND_INVALID(commandName),
           lineNumber
         )
       );

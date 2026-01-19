@@ -1,4 +1,6 @@
-const { VALID_PROPERTIES, TAG_ONE_OF } = require('../constants');
+const { VALID_PROPERTIES } = require('../constants');
+const ConfigManager = require('../ConfigManager');
+const { ERROR_MESSAGES } = require('../messages');
 const { findLineNumber } = require('../helpers');
 const ValidationError = require('./ValidationError');
 
@@ -38,14 +40,14 @@ class HeaderValidator {
         if (similarProp) {
           errors.push(
             new ValidationError(
-              `propriedade com sintaxe incorreta: "${key}" deveria ser "${similarProp}".`,
+              ERROR_MESSAGES.PROPERTY_CASE_SENSITIVE(key, similarProp),
               lineNumber
             )
           );
         } else {
           errors.push(
             new ValidationError(
-              `Propriedade inválida no cabeçalho: "${key}"`,
+              ERROR_MESSAGES.PROPERTY_INVALID(key),
               lineNumber
             )
           );
@@ -62,12 +64,19 @@ class HeaderValidator {
    */
   _validateTags(doc) {
     const errors = [];
+    const requiredTags = ConfigManager.getRequiredTags();
+
+    // Se não há tags configuradas, não valida
+    if (!requiredTags || requiredTags.length === 0) {
+      return errors;
+    }
+
     const tags = doc.tags || [];
 
-    if (!TAG_ONE_OF.some(t => tags.includes(t))) {
+    if (!requiredTags.some(t => tags.includes(t))) {
       errors.push(
         new ValidationError(
-          `Tag de classificação ausente (${TAG_ONE_OF.join(' ou ')}).`
+          ERROR_MESSAGES.TAG_MISSING(requiredTags)
         )
       );
     }

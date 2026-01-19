@@ -1,4 +1,5 @@
 const { COMMAND_PROPERTIES } = require('../constants');
+const { ERROR_MESSAGES } = require('../messages');
 const { findLineNumber } = require('../helpers');
 const ValidationError = require('./ValidationError');
 
@@ -47,7 +48,7 @@ class CommandPropertyValidator {
     if (schema.properties && schema.properties.length > 0) {
       errors.push(
         new ValidationError(
-          `${commandName} deve ter pelo menos uma propriedade: ${schema.properties.join(' ou ')}.`,
+          ERROR_MESSAGES.COMMAND_REQUIRES_PROPERTY(commandName, schema.properties),
           lineNumber
         )
       );
@@ -57,7 +58,7 @@ class CommandPropertyValidator {
     if (schema.requiresValue) {
       errors.push(
         new ValidationError(
-          `${commandName} requer um valor.`,
+          ERROR_MESSAGES.COMMAND_REQUIRES_VALUE(commandName),
           lineNumber
         )
       );
@@ -77,7 +78,7 @@ class CommandPropertyValidator {
       const lineNumber = text ? findLineNumber(text, commandName, null, occurrence) : null;
       errors.push(
         new ValidationError(
-          `${commandName} seletor/valor não pode estar vazio.`,
+          ERROR_MESSAGES.COMMAND_EMPTY_VALUE(commandName),
           lineNumber
         )
       );
@@ -120,7 +121,7 @@ class CommandPropertyValidator {
         const lineNumber = text ? findLineNumber(text, key) : null;
         errors.push(
           new ValidationError(
-            `${commandName} propriedade inválida "${key}".`,
+            ERROR_MESSAGES.COMMAND_INVALID_PROPERTY(commandName, key),
             lineNumber
           )
         );

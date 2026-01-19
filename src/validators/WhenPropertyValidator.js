@@ -1,4 +1,5 @@
 const { WHEN_PROPERTIES, SIBLING_PROPERTIES } = require('../constants');
+const { ERROR_MESSAGES } = require('../messages');
 const { isValidPlatform, findLineNumber } = require('../helpers');
 const ValidationError = require('./ValidationError');
 
@@ -18,7 +19,7 @@ class WhenPropertyValidator {
       const lineNumber = text ? findLineNumber(text, 'when', commandName, commandOccurrence) : null;
       errors.push(
         new ValidationError(
-          "'when' deve ser um objeto com propriedades (platform, visible, notVisible, true).",
+          ERROR_MESSAGES.WHEN_INVALID_TYPE(),
           lineNumber
         )
       );
@@ -32,7 +33,7 @@ class WhenPropertyValidator {
         const lineNumber = this._findLineNumber(text, key, commandName, commandOccurrence);
         errors.push(
           new ValidationError(
-            `propriedade "${key}" está no nível errado (deve estar fora de 'when').`,
+            ERROR_MESSAGES.WHEN_PROPERTY_WRONG_LEVEL(key),
             lineNumber
           )
         );
@@ -43,7 +44,7 @@ class WhenPropertyValidator {
         const lineNumber = this._findLineNumber(text, key, commandName, commandOccurrence);
         errors.push(
           new ValidationError(
-            `propriedade inválida "${key}" em 'when' (válidas: ${WHEN_PROPERTIES.join(', ')}).`,
+            ERROR_MESSAGES.WHEN_INVALID_PROPERTY(key, WHEN_PROPERTIES),
             lineNumber
           )
         );
@@ -71,7 +72,7 @@ class WhenPropertyValidator {
       const lineNumber = findLineNumber(text, 'platform', commandName, commandOccurrence);
       errors.push(
         new ValidationError(
-          'platform deve ser uma string (android | ios | web).',
+          ERROR_MESSAGES.WHEN_PLATFORM_INVALID_TYPE(),
           lineNumber
         )
       );
@@ -82,7 +83,7 @@ class WhenPropertyValidator {
       const lineNumber = findLineNumber(text, 'platform', commandName, commandOccurrence);
       errors.push(
         new ValidationError(
-          `platform deve ser "android", "ios" ou "web", recebido "${whenValue.platform}".`,
+          ERROR_MESSAGES.WHEN_PLATFORM_INVALID_VALUE(whenValue.platform),
           lineNumber
         )
       );
@@ -106,7 +107,7 @@ class WhenPropertyValidator {
           const lineNumber = findLineNumber(text, prop);
           errors.push(
             new ValidationError(
-              `${prop} não pode ser vazio.`,
+              ERROR_MESSAGES.WHEN_PROPERTY_EMPTY(prop),
               lineNumber
             )
           );

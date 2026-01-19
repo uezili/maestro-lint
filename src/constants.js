@@ -1,4 +1,5 @@
-const TAG_ONE_OF = ['smoke', 'functional'];
+const COMMAND_PROPERTIES = require('./config/commandProperties.json');
+
 const VALID_PROPERTIES = ['appId', 'tags', 'onFlowStart', 'onFlowComplete', 'env', 'name'];
 
 const VALID_COMMANDS = [
@@ -37,187 +38,22 @@ const VALID_COMMANDS = [
 const WHEN_PROPERTIES = ['platform', 'visible', 'notVisible', 'true'];
 const SIBLING_PROPERTIES = ['commands', 'file', 'env'];
 const VALID_PLATFORMS = ['android', 'ios', 'web'];
-const COMMAND_PROPERTIES = {
-  tapOn: {
-    properties: [],
-    optional: [
-      'id',
-      'text',
-      'point',
-      'repeat',
-      'delay',
-      'retryTapIfNoChange',
-      'waitToSettleTimeoutMs',
-      'index',
-      'above',
-      'optional',
-      'enabled',
-      'when',
-      'rightOf'
-    ],
-    requiresValue: true
-  },
-  doubleTapOn: {
-    properties: [],
-    optional: [
-      'id',
-      'text',
-      'point',
-      'repeat',
-      'delay',
-      'retryTapIfNoChange',
-      'waitToSettleTimeoutMs',
-      'index',
-      'above',
-      'optional',
-      'enabled',
-      'when'
-    ],
-    requiresValue: true
-  },
-  longPressOn: {
-    properties: [],
-    optional: [
-      'id',
-      'text',
-      'point',
-      'repeat',
-      'delay',
-      'retryTapIfNoChange',
-      'waitToSettleTimeoutMs',
-      'index',
-      'above',
-      'optional',
-      'enabled',
-      'when'
-    ],
-    requiresValue: true
-  },
-  assertVisible: {
-    properties: [],
-    optional: ['text', 'id', 'enabled', 'checked', 'focused', 'selected'],
-    requiresValue: true
-  },
-  assertNotVisible: {
-    properties: [],
-    optional: ['text', 'id', 'enabled', 'checked', 'focused', 'selected'],
-    requiresValue: true
-  },
-  copyTextFrom: {
-    properties: [],
-    optional: ['id', 'text'],
-    requiresValue: true
-  },
-  scrollUntilVisible: {
-    properties: ['element'],
-    optional: ['direction', 'timeout', 'speed', 'visibilityPercentage', 'centerElement', 'when']
-  },
-  inputText: {
-    properties: [],
-    optional: [],
-    requiresValue: true
-  },
-  pasteText: {
-    properties: [],
-    optional: []
-  },
-  eraseText: {
-    properties: [],
-    optional: []
-  },
-  pressKey: {
-    properties: [],
-    optional: ['home', 'back', 'volume up', 'volume down', 'enter', 'tab', 'lock', 'power', 'backspace'],
-    requiresValue: true
-  },
-  scroll: {
-    properties: [],
-    optional: []
-  },
-  swipe: {
-    properties: [],
-    optional: ['from', 'direction', 'start', 'end'],
-    requiresValue: true
-  },
-  extendedWaitUntil: {
-    properties: ['visible', 'notVisible'],
-    optional: ['timeout']
-  },
-  repeat: {
-    properties: ['times', 'while'],
-    optional: ['commands']
-  },
-  retry: {
-    properties: ['commands'],
-    optional: ['maxRetries']
-  },
-  runFlow: {
-    properties: [],
-    optional: ['env', 'when', 'file', 'commands']
-  },
-  runScript: {
-    properties: [],
-    optional: ['file', 'env', 'when'],
-    requiresValue: true
-  },
-  takeScreenshot: {
-    properties: [],
-    optional: ['path']
-  },
-  killApp: {
-    properties: [],
-    optional: []
-  },
-  stopApp: {
-    properties: [],
-    optional: []
-  },
-  launchApp: {
-    properties: [],
-    optional: ['clearState', 'arguments']
-  },
-  clearState: {
-    properties: [],
-    optional: []
-  },
-  clearKeychain: {
-    properties: [],
-    optional: []
-  },
-  back: {
-    properties: [],
-    optional: []
-  },
-  hide: {
-    properties: [],
-    optional: []
-  },
-  openLink: {
-    properties: [],
-    optional: [],
-    requiresValue: true
-  },
-  evalScript: {
-    properties: [],
-    optional: [],
-    requiresValue: true
-  },
-  assertTrue: {
-    properties: [],
-    optional: ['label', 'condition']
-  },
-  waitForAnimationToEnd: {
-    properties: [],
-    optional: ['timeout']
-  }
+
+const LIMITS = {
+  MAX_YAML_PARSE_ITERATIONS: 50,
+  CONTEXT_WINDOW_BEFORE: 20,
+  CONTEXT_WINDOW_AFTER: 20,
+  MAX_LOOKAHEAD_LINES: 10,
+  SEPARATOR_WIDTH: 60,
+  LEVENSHTEIN_TOLERANCE: 0.3
 };
 
 module.exports = {
-  TAG_ONE_OF,
   VALID_PROPERTIES,
   VALID_COMMANDS,
   WHEN_PROPERTIES,
   SIBLING_PROPERTIES,
   VALID_PLATFORMS,
-  COMMAND_PROPERTIES
+  COMMAND_PROPERTIES,
+  LIMITS
 };

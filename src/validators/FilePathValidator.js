@@ -1,6 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const ValidationError = require('./ValidationError');
+const { LIMITS } = require('../constants');
 
 const TEMPLATE_PATTERN = /\$\{/;
 const IGNORE_FILES = new Set(['setup.yaml', 'teardown.yaml']);
@@ -49,7 +50,7 @@ class FilePathValidator {
    * @private
    */
   _validateRunFlowBlock(lines, startIndex, currentDir, errors) {
-    for (let j = startIndex + 1; j < Math.min(startIndex + 10, lines.length); j++) {
+    for (let j = startIndex + 1; j < Math.min(startIndex + LIMITS.MAX_LOOKAHEAD_LINES, lines.length); j++) {
       const nextLine = lines[j];
       const fileMatch = nextLine.match(/^\s*file:\s*['"]?([^'"#\n]+?)['"]?\s*$/);
 
