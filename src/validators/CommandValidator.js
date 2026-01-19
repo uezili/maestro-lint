@@ -1,6 +1,6 @@
-const { VALID_COMMANDS } = require('../constants');
+const { VALID_COMMANDS, LIMITS } = require('../constants');
 const { ERROR_MESSAGES } = require('../messages');
-const { findLineNumber, levenshteinDistance } = require('../helpers');
+const { findLineNumber, findSimilarString } = require('../helpers');
 const ValidationError = require('./ValidationError');
 const commandPropertyValidator = require('./CommandPropertyValidator');
 
@@ -85,7 +85,7 @@ class CommandValidator {
       return errors;
     }
 
-    const closeMatch = this._findSimilarCommandName(commandName);
+    const closeMatch = findSimilarString(commandName, VALID_COMMANDS, LIMITS.LEVENSHTEIN_TOLERANCE);
     if (closeMatch) {
       errors.push(
         new ValidationError(
@@ -103,27 +103,6 @@ class CommandValidator {
     }
 
     return errors;
-  }
-
-  /**
-   * Encontra comando similar por distância de Levenshtein
-   * @private
-   */
-  _findSimilarCommandName(typo) {
-    let bestMatch = null;
-    let minDistance = Infinity;
-
-    for (const validCmd of VALID_COMMANDS) {
-      const distance = levenshteinDistance(typo.toLowerCase(), validCmd.toLowerCase());
-      const maxAllowedDistance = Math.max(1, Math.floor(validCmd.length * 0.3));
-
-      if (distance <= maxAllowedDistance && distance < minDistance) {
-        minDistance = distance;
-        bestMatch = validCmd;
-      }
-    }
-
-    return bestMatch;
   }
 }
 

@@ -1,11 +1,12 @@
 const fs = require('fs');
+const path = require('path');
 const yaml = require('js-yaml');
 const { detectMultipleParsingErrors } = require('./YamlError');
 const ErrorSeverityConverter = require('./ErrorSeverityConverter');
 const ValidationError = require('./validators/ValidationError');
 const ConfigManager = require('./ConfigManager');
 const RuleDetector = require('./RuleDetector');
-const { VALID_COMMANDS, LIMITS } = require('./constants');
+const { VALID_COMMANDS, LIMITS, PROPERTY_TYPO_MAP } = require('./constants');
 const { findSimilarString } = require('./helpers');
 const { commandValidator, headerValidator } = require('./validators/index');
 
@@ -189,12 +190,6 @@ class LintEngine {
    * @private
    */
   _validatePropertiesPattern(text, errors) {
-    const PROPERTY_TYPO_MAP = {
-      pltform: 'platform',
-      visibile: 'visible',
-      notVisibile: 'notVisible'
-    };
-
     const propertyPattern = /([a-zA-Z]+):\s*(\w+)?/gm;
     const reportedProps = new Set();
     let match;
@@ -258,7 +253,6 @@ class LintEngine {
    */
   _validateFilePaths(text, currentFilePath) {
     const errors = [];
-    const path = require('path');
     const lines = text.split('\n');
     const currentDir = path.dirname(currentFilePath);
 
@@ -304,8 +298,6 @@ class LintEngine {
    * @private
    */
   _validateFile(filePath, baseDir, lineNumber, commandType, errors) {
-    const path = require('path');
-
     if (filePath.includes('${')) {
       return;
     }

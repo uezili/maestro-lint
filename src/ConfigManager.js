@@ -1,5 +1,6 @@
 const fs = require('fs');
 const path = require('path');
+const { VALID_SEVERITIES, SEVERITY_LEVELS } = require('./constants');
 
 class ConfigManager {
   constructor() {
@@ -77,10 +78,8 @@ class ConfigManager {
    * @returns {string} Severidade (error, warning, info, off)
    */
   getSeverity(category, ruleName) {
-    const VALID_SEVERITIES = ['off', 'error', 'warning', 'info'];
     const rule = this.config.rules?.[category]?.[ruleName];
-
-    return VALID_SEVERITIES.includes(rule) ? rule : 'error';
+    return VALID_SEVERITIES.includes(rule) ? rule : SEVERITY_LEVELS.ERROR;
   }
 
   /**
@@ -90,7 +89,7 @@ class ConfigManager {
    * @returns {boolean} True se habilitada
    */
   isRuleEnabled(category, ruleName) {
-    return this.getSeverity(category, ruleName) !== 'off';
+    return this.getSeverity(category, ruleName) !== SEVERITY_LEVELS.OFF;
   }
 
   /**

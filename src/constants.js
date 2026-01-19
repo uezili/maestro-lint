@@ -2,38 +2,8 @@ const COMMAND_PROPERTIES = require('./config/commandProperties.json');
 
 const VALID_PROPERTIES = ['appId', 'tags', 'onFlowStart', 'onFlowComplete', 'env', 'name'];
 
-const VALID_COMMANDS = [
-  'assertVisible',
-  'assertNotVisible',
-  'assertTrue',
-  'copyTextFrom',
-  'evalScript',
-  'eraseText',
-  'extendedWaitUntil',
-  'inputText',
-  'killApp',
-  'pressKey',
-  'pasteText',
-  'repeat',
-  'retry',
-  'runFlow',
-  'runScript',
-  'scroll',
-  'scrollUntilVisible',
-  'stopApp',
-  'swipe',
-  'takeScreenshot',
-  'tapOn',
-  'doubleTapOn',
-  'longPressOn',
-  'waitForAnimationToEnd',
-  'launchApp',
-  'clearState',
-  'clearKeychain',
-  'back',
-  'hide',
-  'openLink'
-];
+// Derivar VALID_COMMANDS das chaves do commandProperties.json (DRY principle)
+const VALID_COMMANDS = Object.keys(COMMAND_PROPERTIES);
 
 const WHEN_PROPERTIES = ['platform', 'visible', 'notVisible', 'true'];
 const SIBLING_PROPERTIES = ['commands', 'file', 'env'];
@@ -48,6 +18,26 @@ const LIMITS = {
   LEVENSHTEIN_TOLERANCE: 0.3
 };
 
+// Extensões de mídia suportadas para comandos como addMedia
+const MEDIA_EXTENSIONS = ['.png', '.jpeg', '.jpg', '.gif', '.mp4'];
+
+// Mapa de erros de digitação comuns para propriedades
+const PROPERTY_TYPO_MAP = {
+  pltform: 'platform',
+  visibile: 'visible',
+  notVisibile: 'notVisible'
+};
+
+// Níveis de severidade válidos
+const SEVERITY_LEVELS = {
+  OFF: 'off',
+  ERROR: 'error',
+  WARNING: 'warning',
+  INFO: 'info'
+};
+
+const VALID_SEVERITIES = Object.values(SEVERITY_LEVELS);
+
 module.exports = {
   VALID_PROPERTIES,
   VALID_COMMANDS,
@@ -55,5 +45,9 @@ module.exports = {
   SIBLING_PROPERTIES,
   VALID_PLATFORMS,
   COMMAND_PROPERTIES,
-  LIMITS
+  LIMITS,
+  MEDIA_EXTENSIONS,
+  PROPERTY_TYPO_MAP,
+  SEVERITY_LEVELS,
+  VALID_SEVERITIES
 };

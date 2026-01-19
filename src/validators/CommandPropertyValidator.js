@@ -2,6 +2,8 @@ const { COMMAND_PROPERTIES } = require('../constants');
 const { ERROR_MESSAGES } = require('../messages');
 const { findLineNumber } = require('../helpers');
 const ValidationError = require('./ValidationError');
+const nestedObjectValidator = require('./NestedObjectValidator');
+const arrayCommandValidator = require('./ArrayCommandValidator');
 
 class CommandPropertyValidator {
   /**
@@ -27,6 +29,12 @@ class CommandPropertyValidator {
 
     if (typeof commandValue === 'string' || typeof commandValue === 'number') {
       errors.push(...this._validateSimpleValue(commandName, commandValue, text, occurrence));
+      return errors;
+    }
+
+    // Delegar para ArrayCommandValidator (SRP)
+    if (Array.isArray(commandValue)) {
+      errors.push(...arrayCommandValidator.validate(commandName, commandValue, schema, text, occurrence));
       return errors;
     }
 
@@ -97,6 +105,10 @@ class CommandPropertyValidator {
     errors.push(...this._validateObjectProperties(commandName, commandValue, schema, text, occurrence));
     errors.push(...this._validateRequiredProperties(commandName, commandValue, schema, text, occurrence));
     errors.push(...this._validatePropertyValues(commandName, commandValue, schema, text, occurrence));
+
+    if (schema.nestedObject) {
+      errors.push(...nestedObjectValidator.validate(commandName, commandValue, schema, text, occurrence));
+    }
 
     if (commandValue.when) {
       const whenValidator = require('./WhenPropertyValidator');
@@ -180,26 +192,6 @@ class CommandPropertyValidator {
           );
         }
       }
-    }
-
-    return errors;
-  }
-
-  /**
-   * Valida se requiresValue é satisfeito
-   * @private
-   */
-  _validateRequiresValue(commandName, commandValue, schema, text, _occurrence) {
-    const errors = [];
-
-    if (schema.requiresValue && (!commandValue || Object.keys(commandValue).length === 0)) {
-      const lineNumber = text ? findLineNumber(text, commandName, null, _occurrence) : null;
-      errors.push(
-        new ValidationError(
-          `${commandName} requer um valor.`,
-          lineNumber
-        )
-      );
     }
 
     return errors;

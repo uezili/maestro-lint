@@ -67,6 +67,35 @@ const ERROR_MESSAGES = {
     `Indentação incorreta em propriedade '${property}' sob 'when:'. Esperado ${expected} espaços, encontrado ${found}.`
 };
 
+// Mensagens para comandos baseados em array (addMedia, etc)
+const ARRAY_COMMAND_MESSAGES = {
+  NOT_SUPPORTED: (commandName) => `${commandName} não suporta lista de valores.`,
+  EMPTY_ARRAY: (commandName) => `${commandName} requer pelo menos um item.`,
+  ITEM_NOT_STRING: (commandName, index) => `${commandName} item ${index}: deve ser uma string.`,
+  PATH_EMPTY: (commandName, index) => `${commandName} item ${index}: caminho não pode ser vazio.`,
+  PATH_NOT_RELATIVE: (commandName, index) => `${commandName} item ${index}: caminho deve ser relativo (começar com ./ ou ../).`,
+  INVALID_EXTENSION: (commandName, index, validExts) => 
+    `${commandName} item ${index}: extensão de arquivo inválida. Extensões válidas: ${validExts.join(', ')}.`,
+  URL_EMPTY: (commandName, index) => `${commandName} item ${index}: URL não pode ser vazia.`,
+  URL_INVALID: (commandName, index) => `${commandName} item ${index}: URL deve começar com http:// ou https://.`
+};
+
+// Mensagens para objetos aninhados (setPermissions, etc)
+const NESTED_OBJECT_MESSAGES = {
+  MUST_BE_OBJECT: (commandName, property) => 
+    `${commandName} propriedade "${property}" deve ser um objeto com pares chave-valor.`,
+  MUST_BE_ARRAY: (commandName, property) => 
+    `${commandName} propriedade "${property}" deve ser um array.`,
+  INVALID_KEY: (commandName, nestedKey, key, validKeys) => 
+    `${commandName} em "${nestedKey}": chave inválida "${key}" (válidas: ${validKeys.join(', ')})`,
+  INVALID_VALUE: (commandName, nestedKey, key, value, validValues) => 
+    `${commandName} em "${nestedKey}.${key}": valor inválido "${value}" (válidos: ${validValues.join(', ')})`,
+  INVALID_ITEM: (commandName, nestedKey, item, validItems) => 
+    `${commandName} em "${nestedKey}": valor inválido "${item}" (válidos: ${validItems.join(', ')})`,
+  INVALID_PROPERTY: (commandName, nestedKey, key) => 
+    `${commandName} em "${nestedKey}": propriedade inválida "${key}"`
+};
+
 const SUCCESS_MESSAGES = {
   ALL_PASSED: '✅ Todos os testes passaram no linter!',
   SOME_FAILED: '❌ Alguns testes falharam no linter.',
@@ -82,6 +111,8 @@ const INFO_MESSAGES = {
 
 module.exports = {
   ERROR_MESSAGES,
+  ARRAY_COMMAND_MESSAGES,
+  NESTED_OBJECT_MESSAGES,
   SUCCESS_MESSAGES,
   INFO_MESSAGES
 };

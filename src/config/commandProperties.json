@@ -1,4 +1,11 @@
 {
+  "addMedia": {
+    "properties": [],
+    "optional": [],
+    "requiresValue": false,
+    "isArrayCommand": true,
+    "arrayItemType": "relativePath"
+  },
   "tapOn": {
     "properties": [],
     "optional": [
@@ -66,6 +73,11 @@
     ],
     "requiresValue": true
   },
+  "assertNoDefectsWithAi": {
+    "properties": [],
+    "optional": [],
+    "requiresValue": true
+  },
   "assertNotVisible": {
     "properties": [],
     "optional": [
@@ -77,6 +89,29 @@
       "selected"
     ],
     "requiresValue": true
+  },
+  "assertWithAI": {
+    "properties": [],
+    "optional": [
+      "assertiond"
+    ],
+    "requiresValue": true
+  },
+  "setLocation": {
+    "properties": [],
+    "optional": [
+      "latitude",
+      "longitude"
+    ],
+    "requiresValue": true
+  },
+  "setAirplaneMode": {
+    "properties": [],
+    "optional": []
+  },
+  "toggleAirplaneMode": {
+    "properties": [],
+    "optional": []
   },
   "copyTextFrom": {
     "properties": [],
@@ -130,6 +165,45 @@
   "scroll": {
     "properties": [],
     "optional": []
+  },
+  "setPermissions": {
+    "properties": [],
+    "optional": [
+      "permissions",
+      "appId"
+    ],
+    "requiresValue": false,
+    "nestedObject": {
+      "permissions": {
+        "isMap": true,
+        "validKeys": [
+          "camera",
+          "notifications",
+          "microphone",
+          "calendar",
+          "contacts",
+          "location",
+          "storage",
+          "photos",
+          "health",
+          "homekit",
+          "medialibrary",
+          "motion",
+          "reminders",
+          "siri",
+          "speech",
+          "usertracking",
+          "bluetooth",
+          "phone",
+          "sms"
+        ],
+        "validValues": [
+          "allow",
+          "deny",
+          "unset"
+        ]
+      }
+    }
   },
   "swipe": {
     "properties": [],
@@ -199,6 +273,14 @@
     "properties": [],
     "optional": []
   },
+  "startRecording": {
+    "properties": [],
+    "optional": []
+  },
+  "stopRecording": {
+    "properties": [],
+    "optional": []
+  },
   "launchApp": {
     "properties": [],
     "optional": [
@@ -238,6 +320,14 @@
       "label",
       "condition"
     ]
+  },
+  "travel": {
+    "properties": [],
+    "optional": [
+      "points",
+      "speed"
+    ],
+    "requiresValue": true
   },
   "waitForAnimationToEnd": {
     "properties": [],
