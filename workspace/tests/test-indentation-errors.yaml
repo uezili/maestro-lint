@@ -17,7 +17,7 @@ onFlowComplete:
   - assertVisible: 'indentação errada'
 - tapOn:
      id: 'muitos_espacos'
-- runflow:
+- runFlow:
     when:
       platform: 'android'
     commands:
