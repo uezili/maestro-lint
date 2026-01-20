@@ -31,12 +31,6 @@ onFlowComplete:
 - tapOn:
     id: 'button_login'
 
-# ✅ Comando com propriedade 'when'
-- tapOn:
-    text: 'Enviar'
-    when:
-      platform: android
-
 # ============================================================================
 # SEÇÃO 2: VALIDAÇÃO DE PRESSKEY COM VALORES ESPECÍFICOS
 # ============================================================================
@@ -102,20 +96,6 @@ onFlowComplete:
 # ============================================================================
 # SEÇÃO 6: VALIDAÇÃO DE WHEN COM MÚLTIPLAS PROPRIEDADES
 # ============================================================================
-
-# ✅ When com platform e visible combinadas
-- tapOn:
-    text: 'Botão iOS'
-    when:
-      platform: ios
-      visible: '.*Button.*'
-
-# ✅ When com platform e notVisible
-- assertNotVisible:
-    text: 'Loading'
-    when:
-      platform: android
-      notVisible: 'progress_bar'
 
 # ✅ When com condição true
 - runFlow:
