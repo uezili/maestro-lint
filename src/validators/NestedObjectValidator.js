@@ -2,10 +2,6 @@ const ValidationError = require('./ValidationError');
 const { findLineNumber } = require('../helpers');
 const { NESTED_OBJECT_MESSAGES } = require('../messages');
 
-/**
- * Validador para comandos com estrutura de objeto aninhado (como setPermissions)
- * Responsabilidade: Validar subaparâmetros de comandos complexos
- */
 class NestedObjectValidator {
   /**
    * Valida estrutura de objeto aninhado
@@ -29,11 +25,24 @@ class NestedObjectValidator {
       }
 
       if (nestedSchema.isMap) {
-        errors.push(...this._validateMapObject(commandName, nestedKey, commandValue[nestedKey], nestedSchema, text, occurrence));
+        errors.push(
+          ...this._validateMapObject(commandName, nestedKey, commandValue[nestedKey], nestedSchema, text, occurrence)
+        );
       } else if (nestedSchema.isArray) {
-        errors.push(...this._validateArrayObject(commandName, nestedKey, commandValue[nestedKey], nestedSchema, text, occurrence));
+        errors.push(
+          ...this._validateArrayObject(commandName, nestedKey, commandValue[nestedKey], nestedSchema, text, occurrence)
+        );
       } else {
-        errors.push(...this._validateObjectProperties(commandName, nestedKey, commandValue[nestedKey], nestedSchema, text, occurrence));
+        errors.push(
+          ...this._validateObjectProperties(
+            commandName,
+            nestedKey,
+            commandValue[nestedKey],
+            nestedSchema,
+            text,
+            occurrence
+          )
+        );
       }
     }
 
@@ -49,12 +58,7 @@ class NestedObjectValidator {
 
     if (typeof mapValue !== 'object' || mapValue === null) {
       const lineNumber = findLineNumber(text, nestedKey);
-      errors.push(
-        ValidationError.create(
-          NESTED_OBJECT_MESSAGES.MUST_BE_OBJECT(commandName, nestedKey),
-          lineNumber
-        )
-      );
+      errors.push(ValidationError.create(NESTED_OBJECT_MESSAGES.MUST_BE_OBJECT(commandName, nestedKey), lineNumber));
       return errors;
     }
 
@@ -62,18 +66,13 @@ class NestedObjectValidator {
     const validValues = schema.validValues || [];
 
     for (const [key, value] of Object.entries(mapValue)) {
-      // Validar chave se há lista de chaves válidas
       if (validKeys.length > 0 && !validKeys.includes(key)) {
         const lineNumber = findLineNumber(text, key);
         errors.push(
-          ValidationError.create(
-            NESTED_OBJECT_MESSAGES.INVALID_KEY(commandName, nestedKey, key, validKeys),
-            lineNumber
-          )
+          ValidationError.create(NESTED_OBJECT_MESSAGES.INVALID_KEY(commandName, nestedKey, key, validKeys), lineNumber)
         );
       }
 
-      // Validar valor se há lista de valores válidos
       if (validValues.length > 0 && !validValues.includes(value)) {
         const lineNumber = findLineNumber(text, value);
         errors.push(
@@ -97,12 +96,7 @@ class NestedObjectValidator {
 
     if (!Array.isArray(arrayValue)) {
       const lineNumber = findLineNumber(text, nestedKey);
-      errors.push(
-        ValidationError.create(
-          NESTED_OBJECT_MESSAGES.MUST_BE_ARRAY(commandName, nestedKey),
-          lineNumber
-        )
-      );
+      errors.push(ValidationError.create(NESTED_OBJECT_MESSAGES.MUST_BE_ARRAY(commandName, nestedKey), lineNumber));
       return errors;
     }
 
@@ -134,12 +128,7 @@ class NestedObjectValidator {
 
     if (typeof objectValue !== 'object' || objectValue === null) {
       const lineNumber = findLineNumber(text, nestedKey);
-      errors.push(
-        ValidationError.create(
-          NESTED_OBJECT_MESSAGES.MUST_BE_OBJECT(commandName, nestedKey),
-          lineNumber
-        )
-      );
+      errors.push(ValidationError.create(NESTED_OBJECT_MESSAGES.MUST_BE_OBJECT(commandName, nestedKey), lineNumber));
       return errors;
     }
 
@@ -151,10 +140,7 @@ class NestedObjectValidator {
       if (!allowedKeys.includes(key)) {
         const lineNumber = findLineNumber(text, key);
         errors.push(
-          ValidationError.create(
-            NESTED_OBJECT_MESSAGES.INVALID_PROPERTY(commandName, nestedKey, key),
-            lineNumber
-          )
+          ValidationError.create(NESTED_OBJECT_MESSAGES.INVALID_PROPERTY(commandName, nestedKey, key), lineNumber)
         );
       }
     }

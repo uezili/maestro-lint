@@ -4,77 +4,66 @@
  */
 const ERROR_MESSAGES = {
   // Erros gerais de arquivo
-  APPID_MISSING: 'Parâmetro appId ausente (identificador da aplicação).',
+  APPID_MISSING: 'Parâmetro appId ausente.',
   FILE_EMPTY: 'Arquivo YAML vazio ou inválido.',
-  FILE_NOT_FOUND: (filePath) => `Arquivo não encontrado: "${filePath}"`,
-  PATH_NOT_FOUND: (path) => `Caminho não encontrado: ${path}`,
-  INVALID_PATH: (path) => `O caminho não é um arquivo ou pasta válido: ${path}`,
+  FILE_NOT_FOUND: filePath => `Arquivo não encontrado: "${filePath}"`,
+  PATH_NOT_FOUND: path => `Caminho não encontrado: ${path}`,
+  INVALID_PATH: path => `O caminho não é um arquivo ou pasta válido: ${path}`,
 
   // Erros de propriedades do cabeçalho
-  PROPERTY_INVALID: (key) => `Propriedade inválida no cabeçalho: "${key}"`,
-  PROPERTY_TYPO: (wrong, correct) =>
-    `Propriedade com erro de digitação "${wrong}" deveria ser "${correct}".`,
+  PROPERTY_INVALID: key => `Propriedade inválida no cabeçalho: "${key}"`,
+  PROPERTY_TYPO: (wrong, correct) => `Propriedade com erro de digitação "${wrong}" deveria ser "${correct}".`,
   PROPERTY_CASE_SENSITIVE: (wrong, correct) =>
     `propriedade com sintaxe incorreta: "${wrong}" deveria ser "${correct}".`,
 
   // Erros de tags
-  TAG_MISSING: (allowedTags) =>
-    `Tag de classificação ausente (${allowedTags.join(' ou ')}).`,
+  TAG_MISSING: allowedTags => `Tag de classificação ausente (${allowedTags.join(' ou ')}).`,
 
   // Erros de comandos
-  COMMAND_INVALID: (command) => `comando inválido: "${command}".`,
-  COMMAND_INVALID_WITH_SUGGESTION: (command, suggestion) =>
-    `comando inválido "${command}", correto: "${suggestion}"`,
-  COMMAND_CASE_SENSITIVE: (wrong, correct) =>
-    `Comando com sintaxe incorreta "${wrong}" deveria ser "${correct}".`,
-  COMMAND_TYPO: (wrong, correct) =>
-    `comando com sintaxe incorreta: "${wrong}" deveria ser "${correct}".`,
+  COMMAND_INVALID: command => `comando inválido: "${command}".`,
+  COMMAND_INVALID_WITH_SUGGESTION: (command, suggestion) => `comando inválido "${command}", correto: "${suggestion}"`,
+  COMMAND_CASE_SENSITIVE: (wrong, correct) => `Comando com sintaxe incorreta "${wrong}" deveria ser "${correct}".`,
+  COMMAND_TYPO: (wrong, correct) => `comando com sintaxe incorreta: "${wrong}" deveria ser "${correct}".`,
 
   // Erros de parsing
-  PARSING_ERROR: (message) => `Erro na indentação do comando: ${message}`,
-  INDENTATION_ERROR: (diagram) => `Erro de indentação:${diagram}`,
-  INDENTATION_ERROR_SIMPLE: (message) => `Erro de indentação: ${message}`,
-  COMMANDS_PARSING_ERROR: (message) => `Erro ao fazer indentação dos comandos: ${message}`,
+  PARSING_ERROR: message => `Erro na indentação do comando: ${message}`,
+  INDENTATION_ERROR: diagram => `Erro de indentação:${diagram}`,
+  INDENTATION_ERROR_SIMPLE: message => `Erro de indentação: ${message}`,
+  COMMANDS_PARSING_ERROR: message => `Erro ao fazer indentação dos comandos: ${message}`,
 
   // Erros de processamento
-  PROCESSING_ERROR: (message) => `Erro ao processar arquivo: ${message}`,
+  PROCESSING_ERROR: message => `Erro ao processar arquivo: ${message}`,
   FATAL_ERROR: 'Erro fatal',
 
   // Erros de propriedades de comandos
-  COMMAND_REQUIRES_VALUE: (commandName) => `${commandName} requer um valor.`,
+  COMMAND_REQUIRES_VALUE: commandName => `${commandName} requer um valor.`,
   COMMAND_REQUIRES_PROPERTY: (commandName, properties) =>
     `${commandName} deve ter pelo menos uma propriedade: ${properties.join(' ou ')}.`,
-  COMMAND_EMPTY_VALUE: (commandName) =>
-    `${commandName} seletor/valor não pode estar vazio.`,
-  COMMAND_INVALID_PROPERTY: (commandName, property) =>
-    `${commandName} propriedade inválida "${property}".`,
-  COMMAND_EMPTY_PROPERTY: (commandName, property) =>
-    `${commandName} propriedade "${property}" não pode estar vazia.`,
+  COMMAND_EMPTY_VALUE: commandName => `${commandName} seletor/valor não pode estar vazio.`,
+  COMMAND_INVALID_PROPERTY: (commandName, property) => `${commandName} propriedade inválida "${property}".`,
+  COMMAND_EMPTY_PROPERTY: (commandName, property) => `${commandName} propriedade "${property}" não pode estar vazia.`,
 
   // Erros de 'when'
-  WHEN_INVALID_TYPE: () =>
-    '\'when\' deve ser um objeto com propriedades (platform, visible, notVisible, true).',
-  WHEN_PROPERTY_WRONG_LEVEL: (property) =>
-    `propriedade "${property}" está no nível errado (deve estar fora de 'when').`,
+  WHEN_INVALID_TYPE: () => "'when' deve ser um objeto com propriedades (platform, visible, notVisible, true).",
+  WHEN_PROPERTY_WRONG_LEVEL: property => `propriedade "${property}" está no nível errado (deve estar fora de 'when').`,
   WHEN_INVALID_PROPERTY: (property, validProps) =>
     `propriedade inválida "${property}" em 'when' (válidas: ${validProps.join(', ')}).`,
-  WHEN_PLATFORM_INVALID_TYPE: () =>
-    'platform deve ser uma string (android | ios | web).',
-  WHEN_PLATFORM_INVALID_VALUE: (value) =>
-    `platform deve ser "android", "ios" ou "web", recebido "${value}".`,
-  WHEN_PROPERTY_EMPTY: (property) => `${property} não pode ser vazio.`,
+  WHEN_PLATFORM_INVALID_TYPE: () => 'platform deve ser uma string (android | ios | web).',
+  WHEN_PLATFORM_INVALID_VALUE: value => `platform deve ser "android", "ios" ou "web", recebido "${value}".`,
+  WHEN_PROPERTY_EMPTY: property => `${property} não pode ser vazio.`,
   WHEN_INDENTATION_ERROR: (property, expected, found) =>
     `Indentação incorreta em propriedade '${property}' sob 'when:'. Esperado ${expected} espaços, encontrado ${found}.`
 };
 
 // Mensagens para comandos baseados em array (addMedia, etc)
 const ARRAY_COMMAND_MESSAGES = {
-  NOT_SUPPORTED: (commandName) => `${commandName} não suporta lista de valores.`,
-  EMPTY_ARRAY: (commandName) => `${commandName} requer pelo menos um item.`,
+  NOT_SUPPORTED: commandName => `${commandName} não suporta lista de valores.`,
+  EMPTY_ARRAY: commandName => `${commandName} requer pelo menos um item.`,
   ITEM_NOT_STRING: (commandName, index) => `${commandName} item ${index}: deve ser uma string.`,
   PATH_EMPTY: (commandName, index) => `${commandName} item ${index}: caminho não pode ser vazio.`,
-  PATH_NOT_RELATIVE: (commandName, index) => `${commandName} item ${index}: caminho deve ser relativo (começar com ./ ou ../).`,
-  INVALID_EXTENSION: (commandName, index, validExts) => 
+  PATH_NOT_RELATIVE: (commandName, index) =>
+    `${commandName} item ${index}: caminho deve ser relativo (começar com ./ ou ../).`,
+  INVALID_EXTENSION: (commandName, index, validExts) =>
     `${commandName} item ${index}: extensão de arquivo inválida. Extensões válidas: ${validExts.join(', ')}.`,
   URL_EMPTY: (commandName, index) => `${commandName} item ${index}: URL não pode ser vazia.`,
   URL_INVALID: (commandName, index) => `${commandName} item ${index}: URL deve começar com http:// ou https://.`
@@ -82,18 +71,16 @@ const ARRAY_COMMAND_MESSAGES = {
 
 // Mensagens para objetos aninhados (setPermissions, etc)
 const NESTED_OBJECT_MESSAGES = {
-  MUST_BE_OBJECT: (commandName, property) => 
+  MUST_BE_OBJECT: (commandName, property) =>
     `${commandName} propriedade "${property}" deve ser um objeto com pares chave-valor.`,
-  MUST_BE_ARRAY: (commandName, property) => 
-    `${commandName} propriedade "${property}" deve ser um array.`,
-  INVALID_KEY: (commandName, nestedKey, key, validKeys) => 
+  MUST_BE_ARRAY: (commandName, property) => `${commandName} propriedade "${property}" deve ser um array.`,
+  INVALID_KEY: (commandName, nestedKey, key, validKeys) =>
     `${commandName} em "${nestedKey}": chave inválida "${key}" (válidas: ${validKeys.join(', ')})`,
-  INVALID_VALUE: (commandName, nestedKey, key, value, validValues) => 
+  INVALID_VALUE: (commandName, nestedKey, key, value, validValues) =>
     `${commandName} em "${nestedKey}.${key}": valor inválido "${value}" (válidos: ${validValues.join(', ')})`,
-  INVALID_ITEM: (commandName, nestedKey, item, validItems) => 
+  INVALID_ITEM: (commandName, nestedKey, item, validItems) =>
     `${commandName} em "${nestedKey}": valor inválido "${item}" (válidos: ${validItems.join(', ')})`,
-  INVALID_PROPERTY: (commandName, nestedKey, key) => 
-    `${commandName} em "${nestedKey}": propriedade inválida "${key}"`
+  INVALID_PROPERTY: (commandName, nestedKey, key) => `${commandName} em "${nestedKey}": propriedade inválida "${key}"`
 };
 
 const SUCCESS_MESSAGES = {
@@ -104,8 +91,8 @@ const SUCCESS_MESSAGES = {
 
 const INFO_MESSAGES = {
   EXECUTING: '🔍 Executando Maestro Linter...',
-  CHECKING_FILE: (path) => `📄 Verificando arquivo: ${path}`,
-  CHECKING_FOLDER: (path) => `📁 Verificando pasta: ${path}`,
+  CHECKING_FILE: path => `📄 Verificando arquivo: ${path}`,
+  CHECKING_FOLDER: path => `📁 Verificando pasta: ${path}`,
   RESULTS: '📊 Resultados:'
 };
 

@@ -41,7 +41,7 @@ class ConfigManager {
       rules: {
         header: {
           appId: 'error',
-          tags: 'error',
+          tags: 'off',
           name: 'off',
           env: 'off',
           onFlowStart: 'off',
@@ -61,12 +61,13 @@ class ConfigManager {
         },
         filePath: {
           fileNotFound: 'error',
-          invalidPath: 'warning'
+          invalidPath: 'error'
         }
       },
       settings: {
         reportUnusedDisableDirectives: 'warning',
-        maxWarnings: -1
+        maxWarnings: -1,
+        indentationSpaces: 2
       }
     };
   }
@@ -101,19 +102,25 @@ class ConfigManager {
   }
 
   /**
-   * Retorna o limite máximo de warnings
-   * @returns {number} Máximo de warnings (-1 para ilimitado)
-   */
-  getMaxWarnings() {
-    return this.config.settings?.maxWarnings ?? -1;
-  }
-
-  /**
    * Retorna as tags obrigatórias configuradas
    * @returns {string[]} Array de tags que devem estar presentes (uma delas)
    */
   getRequiredTags() {
     return this.config.tags?.requiredOneOf ?? [];
+  }
+
+  /**
+   * Retorna o padrão de indentação configurado
+   * @returns {number} Número de espaços para indentação
+   */
+  getIndentationSpaces() {
+    const spaces = this.config.settings?.indentationSpaces ?? 2;
+    // Validar que é um número válido (2-8 espaços)
+    if (typeof spaces !== 'number' || spaces < 2 || spaces > 8 || spaces % 1 !== 0) {
+      console.warn(`⚠️ indentationSpaces inválido: ${spaces}. Usando padrão: 2`);
+      return 2;
+    }
+    return spaces;
   }
 
   /**

@@ -20,7 +20,6 @@
       "above",
       "optional",
       "enabled",
-      "when",
       "rightOf",
       "below",
       "leftOf",
@@ -45,8 +44,7 @@
       "index",
       "above",
       "optional",
-      "enabled",
-      "when"
+      "enabled"
     ],
     "requiresValue": true
   },
@@ -63,8 +61,7 @@
       "index",
       "above",
       "optional",
-      "enabled",
-      "when"
+      "enabled"
     ],
     "requiresValue": true
   },

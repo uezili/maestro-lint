@@ -46,7 +46,7 @@ class ResultsPresenter {
 
     const hasErrors = errorsByType.error.length > 0;
 
-    const statusIcon = hasErrors ? '❌' : '⚠️';
+    const statusIcon = hasErrors ? '❌' : '⚠️ ';
     console.log(`\n${statusIcon} ${path.basename(filePath)}`);
 
     errorsByType.error.forEach(error => {

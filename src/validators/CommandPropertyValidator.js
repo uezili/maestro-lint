@@ -55,21 +55,13 @@ class CommandPropertyValidator {
 
     if (schema.properties && schema.properties.length > 0) {
       errors.push(
-        new ValidationError(
-          ERROR_MESSAGES.COMMAND_REQUIRES_PROPERTY(commandName, schema.properties),
-          lineNumber
-        )
+        new ValidationError(ERROR_MESSAGES.COMMAND_REQUIRES_PROPERTY(commandName, schema.properties), lineNumber)
       );
       return errors;
     }
 
     if (schema.requiresValue) {
-      errors.push(
-        new ValidationError(
-          ERROR_MESSAGES.COMMAND_REQUIRES_VALUE(commandName),
-          lineNumber
-        )
-      );
+      errors.push(new ValidationError(ERROR_MESSAGES.COMMAND_REQUIRES_VALUE(commandName), lineNumber));
     }
 
     return errors;
@@ -84,12 +76,7 @@ class CommandPropertyValidator {
 
     if (!commandValue || (typeof commandValue === 'string' && commandValue.trim() === '')) {
       const lineNumber = text ? findLineNumber(text, commandName, null, occurrence) : null;
-      errors.push(
-        new ValidationError(
-          ERROR_MESSAGES.COMMAND_EMPTY_VALUE(commandName),
-          lineNumber
-        )
-      );
+      errors.push(new ValidationError(ERROR_MESSAGES.COMMAND_EMPTY_VALUE(commandName), lineNumber));
     }
 
     return errors;
@@ -131,12 +118,7 @@ class CommandPropertyValidator {
     for (const key of cmdKeys) {
       if (!validKeys.includes(key)) {
         const lineNumber = text ? findLineNumber(text, key) : null;
-        errors.push(
-          new ValidationError(
-            ERROR_MESSAGES.COMMAND_INVALID_PROPERTY(commandName, key),
-            lineNumber
-          )
-        );
+        errors.push(new ValidationError(ERROR_MESSAGES.COMMAND_INVALID_PROPERTY(commandName, key), lineNumber));
       }
     }
 
@@ -184,12 +166,7 @@ class CommandPropertyValidator {
       if (commandValue[prop] !== undefined) {
         if (this._isEmpty(commandValue[prop])) {
           const lineNumber = text ? findLineNumber(text, commandName, null, occurrence) : null;
-          errors.push(
-            new ValidationError(
-              `${commandName} propriedade "${prop}" não pode estar vazia.`,
-              lineNumber
-            )
-          );
+          errors.push(new ValidationError(`${commandName} propriedade "${prop}" não pode estar vazia.`, lineNumber));
         }
       }
     }

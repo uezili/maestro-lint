@@ -1,5 +1,4 @@
 const fs = require('fs');
-const path = require('path');
 const yaml = require('js-yaml');
 const { detectMultipleParsingErrors } = require('./YamlError');
 const ErrorSeverityConverter = require('./ErrorSeverityConverter');
@@ -8,7 +7,10 @@ const ConfigManager = require('./ConfigManager');
 const RuleDetector = require('./RuleDetector');
 const { VALID_COMMANDS, LIMITS, PROPERTY_TYPO_MAP } = require('./constants');
 const { findSimilarString } = require('./helpers');
-const { commandValidator, headerValidator } = require('./validators/index');
+const commandValidator = require('./validators/CommandValidator');
+const headerValidator = require('./validators/HeaderValidator');
+const IndentationValidator = require('./validators/IndentationValidator');
+const FilePathValidator = require('./validators/FilePathValidator');
 
 const SUBFLOW_PATTERN = /\/subflows\//;
 
@@ -24,7 +26,7 @@ class LintEngine {
     const isSubflowFile = this._isSubflow(filePath);
 
     if (!text.includes('appId:')) {
-      errors.push('Parâmetro appId ausente (identificador da aplicação).');
+      errors.push('Parâmetro appId ausente.');
     }
 
     const docs = text.split('---');
@@ -65,7 +67,6 @@ class LintEngine {
       errors.push(`Erro ao processar arquivo: ${error.message}`);
     }
 
-    // Converter erros para objetos com severidade
     return errors.map(error => {
       if (typeof error === 'string') {
         return ErrorSeverityConverter.convert(error, 'command', 'invalidCommand');
@@ -218,123 +219,26 @@ class LintEngine {
   }
 
   /**
-   * Valida indentação de propriedades 'when'
+   * Valida indentação de propriedades usando IndentationValidator
    * @private
    */
   _validateIndentation(text) {
-    const errors = [];
-    const lines = text.split('\n');
-
-    for (let i = 0; i < lines.length - 1; i++) {
-      const line = lines[i];
-
-      if (/^\s+when:\s*$/.test(line)) {
-        const whenIndent = /^(\s*)/.exec(line)[1].length;
-        const expectedIndent = whenIndent + 2;
-        const nextLine = lines[i + 1];
-        const nextLineIndent = /^(\s*)/.exec(nextLine)[1].length;
-        const isProperty = /^(\s*)([\w-]+):/.test(nextLine);
-
-        if (isProperty && nextLineIndent !== expectedIndent) {
-          const propertyName = /^(\s*)([\w-]+):/.exec(nextLine)[2];
-          errors.push(
-            `Linha ${i + 2}: Indentação incorreta em propriedade '${propertyName}' sob 'when:'. Esperado ${expectedIndent} espaços, encontrado ${nextLineIndent}.`
-          );
-        }
-      }
-    }
-
-    return errors;
+    return IndentationValidator.validate(text);
   }
 
   /**
-   * Valida caminhos de arquivos
+   * Valida caminhos de arquivos usando FilePathValidator
    * @private
    */
   _validateFilePaths(text, currentFilePath) {
-    const errors = [];
-    const lines = text.split('\n');
-    const currentDir = path.dirname(currentFilePath);
-
-    for (let i = 0; i < lines.length; i++) {
-      const line = lines[i];
-      const inlineScriptMatch = line.match(/^\s*-?\s*runScript:\s*['"]?([^'"#\n]+?)['"]?\s*$/);
-      const inlineFlowMatch = line.match(/^\s*-?\s*runFlow:\s*['"]?([^'"#\n]+?)['"]?\s*$/);
-
-      if (inlineScriptMatch) {
-        const filePath = inlineScriptMatch[1].trim();
-        this._validateFile(filePath, currentDir, i + 1, 'runScript', errors);
-      }
-
-      if (inlineFlowMatch) {
-        const filePath = inlineFlowMatch[1].trim();
-        this._validateFile(filePath, currentDir, i + 1, 'runFlow', errors);
-      }
-
-      const runFlowMatch = line.match(/^\s*-?\s*runFlow:\s*$/);
-      if (runFlowMatch && i + 1 < lines.length) {
-        for (let j = i + 1; j < Math.min(i + LIMITS.MAX_LOOKAHEAD_LINES, lines.length); j++) {
-          const nextLine = lines[j];
-          const fileMatch = nextLine.match(/^\s*file:\s*['"]?([^'"#\n]+?)['"]?\s*$/);
-
-          if (fileMatch) {
-            const filePath = fileMatch[1].trim();
-            this._validateFile(filePath, currentDir, j + 1, 'runFlow', errors);
-            break;
-          }
-
-          if (/^\s*-\s*\w+:/.test(nextLine)) {
-            break;
-          }
-        }
-      }
-    }
-
-    return errors;
-  }
-
-  /**
-   * Valida existência de um arquivo
-   * @private
-   */
-  _validateFile(filePath, baseDir, lineNumber, commandType, errors) {
-    if (filePath.includes('${')) {
-      return;
-    }
-
-    const fileName = path.basename(filePath);
-    if (fileName === 'setup.yaml' || fileName === 'teardown.yaml') {
-      return;
-    }
-
-    const absolutePath = path.resolve(baseDir, filePath);
-
-    if (!fs.existsSync(absolutePath)) {
-      const ext = path.extname(filePath);
-      let found = false;
-
-      if (!ext) {
-        const extensions = commandType === 'runScript' ? ['.js'] : ['.yaml', '.yml'];
-
-        for (const extension of extensions) {
-          if (fs.existsSync(absolutePath + extension)) {
-            found = true;
-            break;
-          }
-        }
-      }
-
-      if (!found) {
-        errors.push(`Linha ${lineNumber}: Arquivo não encontrado: "${filePath}"`);
-      }
-    }
+    return FilePathValidator.validate(text, currentFilePath);
   }
 
   /**
    * Trata erros de parsing
    * @private
    */
-  _handleParsingError(error, text, _docText) {
+  _handleParsingError(error, text) {
     const errors = [];
     const parsingErrors = detectMultipleParsingErrors(text);
 

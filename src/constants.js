@@ -9,6 +9,22 @@ const WHEN_PROPERTIES = ['platform', 'visible', 'notVisible', 'true'];
 const SIBLING_PROPERTIES = ['commands', 'file', 'env'];
 const VALID_PLATFORMS = ['android', 'ios', 'web'];
 
+// Comandos que aceitam blocos aninhados (runFlow, repeat, etc.)
+const BLOCK_COMMANDS = ['runFlow', 'repeat', 'retry', 'runScript', 'assertTrue'];
+
+// Propriedades que contêm sub-comandos (lista de comandos)
+const COMMAND_LIST_PROPERTIES = ['commands', 'onFlowStart', 'onFlowComplete'];
+
+// Propriedades que contêm sub-propriedades (objetos aninhados)
+const NESTED_PROPERTIES = [
+  // Condições e fluxo
+  'when', 'env', 'while',
+  // Seletores de elemento (podem ter id, text, etc.)
+  'element', 'visible', 'notVisible',
+  // Propriedades de tapOn/longPressOn que aceitam objetos
+  'childOf', 'containsChild', 'containsDescendants'
+];
+
 const LIMITS = {
   MAX_YAML_PARSE_ITERATIONS: 50,
   CONTEXT_WINDOW_BEFORE: 20,
@@ -44,6 +60,9 @@ module.exports = {
   WHEN_PROPERTIES,
   SIBLING_PROPERTIES,
   VALID_PLATFORMS,
+  BLOCK_COMMANDS,
+  COMMAND_LIST_PROPERTIES,
+  NESTED_PROPERTIES,
   COMMAND_PROPERTIES,
   LIMITS,
   MEDIA_EXTENSIONS,
