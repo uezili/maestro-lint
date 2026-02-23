@@ -38,9 +38,19 @@ class HeaderValidator {
         const lineNumber = findLineNumber(text, key);
 
         if (similarProp) {
-          errors.push(new ValidationError(ERROR_MESSAGES.PROPERTY_CASE_SENSITIVE(key, similarProp), lineNumber));
+          errors.push(
+            new ValidationError(
+              ERROR_MESSAGES.PROPERTY_CASE_SENSITIVE(key, similarProp),
+              lineNumber
+            )
+          );
         } else {
-          errors.push(new ValidationError(ERROR_MESSAGES.PROPERTY_INVALID(key), lineNumber));
+          errors.push(
+            new ValidationError(
+              ERROR_MESSAGES.PROPERTY_INVALID(key),
+              lineNumber
+            )
+          );
         }
       }
     }
@@ -64,11 +74,16 @@ class HeaderValidator {
     const tags = doc.tags || [];
 
     if (!requiredTags.some(t => tags.includes(t))) {
-      errors.push(new ValidationError(ERROR_MESSAGES.TAG_MISSING(requiredTags)));
+      errors.push(
+        new ValidationError(
+          ERROR_MESSAGES.TAG_MISSING(requiredTags)
+        )
+      );
     }
 
     return errors;
   }
+
 }
 
 module.exports = new HeaderValidator();
