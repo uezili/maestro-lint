@@ -2,12 +2,11 @@ appId: com.example.app
 tags:
   - smoke
   - wip
-name: 'Validação completa de todas as regras do linter'
+name: '[TEST-001] - Validação completa de todas as regras do linter'
 env:
     TEST_ENV: 'production'
     MOBILE_TOKEN: true
 
-androidWebViewHierarchy: devtools
 # onFlowStart:
 # - runFlow: workspace/common/subflows/setup.yaml
 # - runFlow:

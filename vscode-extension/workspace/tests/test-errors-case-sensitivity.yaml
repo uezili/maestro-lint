@@ -1,0 +1,22 @@
+appId: com.example.app
+tags:
+  - smoke
+  - wip
+name: '[TEST-002] - Teste de erros de capitalização'
+onFlowstart:
+  # Esperado: erro de filePath + case-sensitivity (runflow → runFlow)
+  - runflow: workspace/commn/subflows/setup.yaml
+onFlowComplete:
+  # Esperado: erro de filePath (arquivo não encontrado)
+  - runFlow: workspace/common/subflows/teardown.yaml
+---
+- tapOn: 'Botão'
+- presskey: enter
+- assertTrue:
+    condition: ${true}
+    label: 'Teste'
+
+# Checklist:
+# - helper findCaseSensitiveMatch exportado (CLI não deve quebrar)
+# - filePath: workspace/commn/subflows/setup.yaml (erro esperado)
+# - filePath: workspace/common/subflows/teardown.yaml (erro esperado)
