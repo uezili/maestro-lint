@@ -3,13 +3,13 @@ tags:
   - smoke
   - wip
 name: '[TEST-002] - Teste de erros de capitalização'
-onFlowstart:
+onFlowStart:
   - runflow: workspace/commn/subflows/setup.yaml
 onFlowComplete:
   - runFlow: workspace/common/subflows/teardown.yaml
 ---
 - tapOn: 'Botão'
-- presskey: enter
+- pressKey: enter
 - assertTrue:
     condition: ${true}
     label: 'Teste'
