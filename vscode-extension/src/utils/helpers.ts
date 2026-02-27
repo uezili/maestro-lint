@@ -59,32 +59,3 @@ export function findCaseSensitiveMatch(input: string, candidates: string[]): str
   }
   return null;
 }
-
-/**
- * Encontra o número da linha de uma propriedade/comando no texto YAML
- */
-export function findLineNumber(text: string, key: string, startLine: number = 0): number {
-  const lines = text.split('\n');
-  for (let i = startLine; i < lines.length; i++) {
-    const trimmed = lines[i].trimStart();
-    if (trimmed.startsWith(`${key}:`) || trimmed.startsWith(`- ${key}:`) || trimmed.startsWith(`- ${key}`)) {
-      return i;
-    }
-  }
-  return startLine;
-}
-
-/**
- * Encontra todas as ocorrências de uma key no texto e retorna as linhas
- */
-export function findAllLineNumbers(text: string, key: string): number[] {
-  const lines = text.split('\n');
-  const result: number[] = [];
-  for (let i = 0; i < lines.length; i++) {
-    const trimmed = lines[i].trimStart();
-    if (trimmed.startsWith(`${key}:`) || trimmed.startsWith(`- ${key}:`) || trimmed.startsWith(`- ${key}`)) {
-      result.push(i);
-    }
-  }
-  return result;
-}

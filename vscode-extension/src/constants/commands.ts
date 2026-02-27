@@ -17,6 +17,7 @@ export const VALID_HEADER_PROPERTIES: string[] = [
   'env',
   'onFlowStart',
   'onFlowComplete',
+  'androidWebViewHierarchy',
 ];
 
 export const VALID_WHEN_PROPERTIES: string[] = ['visible', 'notVisible', 'platform', 'true'];

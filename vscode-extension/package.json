@@ -91,6 +91,7 @@
     "vscode:prepublish": "npm run compile",
     "compile": "tsc -p ./",
     "watch": "tsc -watch -p ./",
+    "test": "npm run compile && node --test out/tests/validators.test.js",
     "lint": "eslint src --ext ts",
     "package": "vsce package",
     "publish": "vsce publish"

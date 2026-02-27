@@ -2,16 +2,24 @@ import { LintError, Severity } from '../models/LintError';
 import { VALID_HEADER_PROPERTIES } from '../constants/commands';
 import { findCaseSensitiveMatch, findBestMatch } from '../utils/helpers';
 import { ConfigManager } from '../config/ConfigManager';
+import { lintSource } from '../utils/lintSource';
+import { findHeaderKeyLine } from '../utils/lineLocator';
+import { ValidationContext, Validator } from './Validator';
 
-export class HeaderValidator {
+export class HeaderValidator implements Validator {
   constructor(private configManager: ConfigManager) {}
 
-  validate(headerObj: Record<string, unknown>, text: string): LintError[] {
+  validate(context: ValidationContext): LintError[] {
     const errors: LintError[] = [];
-    const lines = text.split('\n');
+    const lines = context.lines;
+    const headerObj = context.header;
+
+    if (!headerObj) {
+      return errors;
+    }
 
     for (const key of Object.keys(headerObj)) {
-      const lineIndex = this.findHeaderLine(lines, key);
+      const lineIndex = findHeaderKeyLine(lines, key);
 
       // Case-sensitivity check
       const caseSensitiveMatch = findCaseSensitiveMatch(key, VALID_HEADER_PROPERTIES);
@@ -25,7 +33,7 @@ export class HeaderValidator {
             column: col,
             endColumn: col + key.length,
             severity,
-            source: 'maestro-lint(header.caseSensitivity)',
+            source: lintSource('header', 'caseSensitivity'),
           });
         }
         continue;
@@ -47,7 +55,7 @@ export class HeaderValidator {
             column: col,
             endColumn: col + key.length,
             severity,
-            source: 'maestro-lint(header.invalidProperty)',
+            source: lintSource('header', 'invalidProperty'),
           });
         }
       }
@@ -65,37 +73,24 @@ export class HeaderValidator {
             line: 0,
             column: 0,
             severity,
-            source: 'maestro-lint(header.tags)',
+            source: lintSource('header', 'tags'),
           });
         }
       } else {
         const hasRequired = tags.some((tag: string) => config.tags.requiredOneOf.includes(tag));
         if (!hasRequired) {
-          const lineIndex = this.findHeaderLine(lines, 'tags');
+          const lineIndex = findHeaderKeyLine(lines, 'tags');
           errors.push({
             message: `Nenhuma tag obrigatória encontrada. Requer pelo menos uma de: ${config.tags.requiredOneOf.join(', ')}`,
             line: lineIndex,
             column: 0,
             severity: this.configManager.getRuleSeverity('header', 'tags') as Severity,
-            source: 'maestro-lint(header.tags)',
+            source: lintSource('header', 'tags'),
           });
         }
       }
     }
 
     return errors;
-  }
-
-  private findHeaderLine(lines: string[], key: string): number {
-    for (let i = 0; i < lines.length; i++) {
-      if (lines[i] === '---') {
-        break;
-      }
-      const trimmed = lines[i].trimStart();
-      if (trimmed.startsWith(`${key}:`)) {
-        return i;
-      }
-    }
-    return 0;
   }
 }

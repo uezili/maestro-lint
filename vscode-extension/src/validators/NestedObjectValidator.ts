@@ -2,31 +2,36 @@ import { LintError, Severity } from '../models/LintError';
 import { NESTED_OBJECT_COMMANDS, getCommandDef } from '../constants/commands';
 import type { NestedObjectDef } from '../constants/commands';
 import { ConfigManager } from '../config/ConfigManager';
+import { findKeyLine } from '../utils/lineLocator';
+import { lintSource } from '../utils/lintSource';
+import { isRecord } from '../utils/typeGuards';
+import { ValidationContext, Validator } from './Validator';
 
-export class NestedObjectValidator {
+export class NestedObjectValidator implements Validator {
   constructor(private configManager: ConfigManager) {}
 
-  validate(commands: unknown[], text: string): LintError[] {
+  validate(context: ValidationContext): LintError[] {
     const errors: LintError[] = [];
-    const lines = text.split('\n');
+    const lines = context.lines;
+    const commands = context.commands;
 
     for (const command of commands) {
-      if (typeof command !== 'object' || command === null) {
+      if (!isRecord(command)) {
         continue;
       }
 
-      const commandObj = command as Record<string, unknown>;
+      const commandObj = command;
 
       for (const nestedCmd of NESTED_OBJECT_COMMANDS) {
         if (nestedCmd in commandObj) {
           const value = commandObj[nestedCmd];
-          if (typeof value === 'object' && value !== null) {
+          if (isRecord(value)) {
             const def = getCommandDef(nestedCmd);
             if (def?.nestedObject) {
               errors.push(
                 ...this.validateNestedObject(
                   nestedCmd,
-                  value as Record<string, unknown>,
+                  value,
                   def.nestedObject,
                   lines
                 )
@@ -61,7 +66,7 @@ export class NestedObjectValidator {
       if (nestedDef.isMap) {
         const map = nestedValue as Record<string, unknown>;
         for (const [key, val] of Object.entries(map)) {
-          const lineIndex = this.findKeyLine(lines, key);
+          const lineIndex = findKeyLine(lines, key);
 
           // Validate key
           if (!nestedDef.validKeys.includes(key)) {
@@ -71,7 +76,7 @@ export class NestedObjectValidator {
               column: lines[lineIndex]?.indexOf(key) ?? 0,
               endColumn: (lines[lineIndex]?.indexOf(key) ?? 0) + key.length,
               severity,
-              source: `maestro-lint(command.${commandName})`,
+              source: lintSource('command', commandName),
             });
           }
 
@@ -83,7 +88,7 @@ export class NestedObjectValidator {
               column: lines[lineIndex]?.indexOf(val) ?? 0,
               endColumn: (lines[lineIndex]?.indexOf(val) ?? 0) + val.length,
               severity,
-              source: `maestro-lint(command.${commandName})`,
+              source: lintSource('command', commandName),
             });
           }
         }
@@ -91,15 +96,5 @@ export class NestedObjectValidator {
     }
 
     return errors;
-  }
-
-  private findKeyLine(lines: string[], key: string): number {
-    for (let i = 0; i < lines.length; i++) {
-      const trimmed = lines[i].trimStart();
-      if (trimmed.startsWith(`${key}:`)) {
-        return i;
-      }
-    }
-    return 0;
   }
 }

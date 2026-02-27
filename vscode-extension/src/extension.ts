@@ -3,20 +3,37 @@ import { MaestroLintProvider } from './providers/MaestroLintProvider';
 import { MaestroCodeActionProvider } from './providers/CodeActionProvider';
 import { ConfigManager } from './config/ConfigManager';
 import { OutputManager } from './utils/OutputManager';
+import { createDebouncedFn, DebouncedFn } from './utils/debounce';
 
-let lintProvider: MaestroLintProvider;
+let deactivateCallback: (() => void) | undefined;
 
 export function activate(context: vscode.ExtensionContext) {
   const outputManager = new OutputManager();
   outputManager.log('🎯 Maestro Lint ativado!');
+  context.subscriptions.push(outputManager);
 
   const configManager = new ConfigManager();
-  lintProvider = new MaestroLintProvider(configManager, outputManager);
 
   const diagnosticCollection = vscode.languages.createDiagnosticCollection('maestro-lint');
   context.subscriptions.push(diagnosticCollection);
 
-  lintProvider.setDiagnosticCollection(diagnosticCollection);
+  const lintProvider = new MaestroLintProvider(diagnosticCollection, configManager, outputManager);
+  let debouncedValidation: DebouncedFn | undefined;
+
+  const validateWithDebounce = (document: vscode.TextDocument) => {
+    const config = vscode.workspace.getConfiguration('maestroLint');
+    const delay = config.get<number>('debounceDelay', 500);
+
+    if (debouncedValidation) {
+      debouncedValidation.cancel();
+    }
+
+    debouncedValidation = createDebouncedFn(() => {
+      void lintProvider.validateDocument(document);
+    }, delay);
+
+    debouncedValidation();
+  };
 
   // Registrar Code Action Provider (Quick Fixes)
   context.subscriptions.push(
@@ -29,20 +46,19 @@ export function activate(context: vscode.ExtensionContext) {
 
   // Validar documento ativo ao abrir
   if (vscode.window.activeTextEditor) {
-    lintProvider.validateDocument(vscode.window.activeTextEditor.document);
+    void lintProvider.validateDocument(vscode.window.activeTextEditor.document);
   }
 
   // Validar ao trocar de editor
   context.subscriptions.push(
     vscode.window.onDidChangeActiveTextEditor((editor) => {
       if (editor) {
-        lintProvider.validateDocument(editor.document);
+        void lintProvider.validateDocument(editor.document);
       }
     })
   );
 
   // Validar em tempo real (on type)
-  let debounceTimer: ReturnType<typeof setTimeout> | undefined;
   context.subscriptions.push(
     vscode.workspace.onDidChangeTextDocument((event) => {
       const config = vscode.workspace.getConfiguration('maestroLint');
@@ -50,14 +66,7 @@ export function activate(context: vscode.ExtensionContext) {
         return;
       }
 
-      if (debounceTimer) {
-        clearTimeout(debounceTimer);
-      }
-
-      const delay = config.get<number>('debounceDelay', 500);
-      debounceTimer = setTimeout(() => {
-        lintProvider.validateDocument(event.document);
-      }, delay);
+      validateWithDebounce(event.document);
     })
   );
 
@@ -66,7 +75,7 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.workspace.onDidSaveTextDocument((document) => {
       const config = vscode.workspace.getConfiguration('maestroLint');
       if (config.get<boolean>('validateOnSave', true)) {
-        lintProvider.validateDocument(document);
+        void lintProvider.validateDocument(document);
       }
     })
   );
@@ -83,15 +92,15 @@ export function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(
     configWatcher.onDidChange(() => {
       outputManager.log('🔄 Configuração alterada, recarregando...');
-      configManager.reload();
+      void configManager.reload();
       lintProvider.revalidateAll();
     }),
     configWatcher.onDidCreate(() => {
-      configManager.reload();
+      void configManager.reload();
       lintProvider.revalidateAll();
     }),
     configWatcher.onDidDelete(() => {
-      configManager.reload();
+      void configManager.reload();
       lintProvider.revalidateAll();
     }),
     configWatcher
@@ -102,7 +111,7 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.commands.registerCommand('maestroLint.validateFile', () => {
       const editor = vscode.window.activeTextEditor;
       if (editor) {
-        lintProvider.validateDocument(editor.document);
+        void lintProvider.validateDocument(editor.document);
         outputManager.log(`📄 Validado: ${editor.document.fileName}`);
       }
     }),
@@ -112,7 +121,7 @@ export function activate(context: vscode.ExtensionContext) {
     }),
 
     vscode.commands.registerCommand('maestroLint.restart', () => {
-      configManager.reload();
+      void configManager.reload();
       diagnosticCollection.clear();
       lintProvider.revalidateAll();
       outputManager.log('🔄 Maestro Lint reiniciado!');
@@ -124,11 +133,14 @@ export function activate(context: vscode.ExtensionContext) {
     })
   );
 
+  deactivateCallback = () => {
+    debouncedValidation?.cancel();
+    lintProvider.dispose();
+  };
+
   outputManager.log('✅ Maestro Lint pronto!');
 }
 
 export function deactivate() {
-  if (lintProvider) {
-    lintProvider.dispose();
-  }
+  deactivateCallback?.();
 }

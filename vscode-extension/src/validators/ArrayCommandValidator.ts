@@ -1,29 +1,37 @@
 import { LintError, Severity } from '../models/LintError';
 import { VALID_MEDIA_EXTENSIONS, getCommandDef, ARRAY_COMMANDS } from '../constants/commands';
 import { ConfigManager } from '../config/ConfigManager';
+import { lintSource } from '../utils/lintSource';
+import { findCommandLine, findSeparatorLine } from '../utils/lineLocator';
+import { isRecord } from '../utils/typeGuards';
+import { ValidationContext, Validator } from './Validator';
 
-export class ArrayCommandValidator {
+export class ArrayCommandValidator implements Validator {
   constructor(private configManager: ConfigManager) {}
 
-  validate(commands: unknown[], text: string): LintError[] {
+  validate(context: ValidationContext): LintError[] {
     const errors: LintError[] = [];
-    const lines = text.split('\n');
+    const lines = context.lines;
+    const commands = context.commands;
+    const separatorLine = findSeparatorLine(lines);
+    let commandStartLine = separatorLine >= 0 ? separatorLine + 1 : 0;
 
     for (const command of commands) {
-      if (typeof command !== 'object' || command === null) {
+      if (!isRecord(command)) {
         continue;
       }
 
-      const commandObj = command as Record<string, unknown>;
+      const commandObj = command;
 
       for (const arrayCmd of ARRAY_COMMANDS) {
         if (arrayCmd in commandObj) {
           const items = commandObj[arrayCmd];
           if (Array.isArray(items)) {
-            const lineIndex = this.findCommandLine(lines, arrayCmd);
+            const lineIndex = findCommandLine(lines, arrayCmd, commandStartLine);
             const def = getCommandDef(arrayCmd);
             const itemType = def?.arrayItemType ?? 'string';
             errors.push(...this.validateArrayItems(arrayCmd, items, lines, lineIndex, itemType));
+            commandStartLine = lineIndex + 1;
           }
         }
       }
@@ -56,7 +64,7 @@ export class ArrayCommandValidator {
           line,
           column: 0,
           severity,
-          source: `maestro-lint(command.${commandName})`,
+          source: lintSource('command', commandName),
         });
         continue;
       }
@@ -67,7 +75,7 @@ export class ArrayCommandValidator {
           line,
           column: 0,
           severity,
-          source: `maestro-lint(command.${commandName})`,
+          source: lintSource('command', commandName),
         });
         continue;
       }
@@ -95,7 +103,7 @@ export class ArrayCommandValidator {
         line,
         column: 0,
         severity,
-        source: `maestro-lint(command.${commandName})`,
+        source: lintSource('command', commandName),
       });
     }
 
@@ -108,21 +116,11 @@ export class ArrayCommandValidator {
           line,
           column: 0,
           severity,
-          source: `maestro-lint(command.${commandName})`,
+          source: lintSource('command', commandName),
         });
       }
     }
 
     return errors;
-  }
-
-  private findCommandLine(lines: string[], key: string): number {
-    for (let i = 0; i < lines.length; i++) {
-      const trimmed = lines[i].trimStart();
-      if (trimmed.startsWith(`- ${key}:`)) {
-        return i;
-      }
-    }
-    return 0;
   }
 }

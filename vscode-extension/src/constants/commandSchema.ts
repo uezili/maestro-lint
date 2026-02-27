@@ -64,7 +64,7 @@ export const COMMAND_SCHEMA: Record<string, CommandDef> = {
   },
   assertWithAI: {
     properties: [],
-    optional: ['assertiond'],
+    optional: ['assertion'],
     requiresValue: true,
   },
   setLocation: {

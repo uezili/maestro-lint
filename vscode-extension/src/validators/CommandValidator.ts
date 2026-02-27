@@ -8,35 +8,35 @@ import {
 } from '../constants/commands';
 import { findCaseSensitiveMatch, findBestMatch } from '../utils/helpers';
 import { ConfigManager } from '../config/ConfigManager';
+import { lintSource } from '../utils/lintSource';
+import { findCommandLine, findPropertyLine, findSeparatorLine } from '../utils/lineLocator';
+import { isRecord } from '../utils/typeGuards';
+import { ValidationContext, Validator } from './Validator';
 
-export class CommandValidator {
+export class CommandValidator implements Validator {
   constructor(private configManager: ConfigManager) {}
 
-  validate(commands: unknown[], text: string): LintError[] {
+  validate(context: ValidationContext): LintError[] {
     const errors: LintError[] = [];
-    const lines = text.split('\n');
+    const lines = context.lines;
+    const commands = context.commands;
 
-    let commandStartLine = 0;
-    for (let i = 0; i < lines.length; i++) {
-      if (lines[i].trim() === '---') {
-        commandStartLine = i + 1;
-        break;
-      }
-    }
+    const separatorLine = findSeparatorLine(lines);
+    let commandStartLine = separatorLine >= 0 ? separatorLine + 1 : 0;
 
     for (const command of commands) {
       if (typeof command === 'string') {
-        const lineIndex = this.findCommandLine(lines, command, commandStartLine);
+        const lineIndex = findCommandLine(lines, command, commandStartLine);
         errors.push(...this.validateCommandName(command, lines, lineIndex));
         commandStartLine = lineIndex + 1;
         continue;
       }
 
-      if (typeof command === 'object' && command !== null) {
-        const commandObj = command as Record<string, unknown>;
+      if (isRecord(command)) {
+        const commandObj = command;
 
         for (const [key, value] of Object.entries(commandObj)) {
-          const lineIndex = this.findCommandLine(lines, key, commandStartLine);
+          const lineIndex = findCommandLine(lines, key, commandStartLine);
 
           // Validate command name
           const nameErrors = this.validateCommandName(key, lines, lineIndex);
@@ -61,7 +61,7 @@ export class CommandValidator {
                 line: lineIndex,
                 column: 0,
                 severity,
-                source: 'maestro-lint(command.missingValue)',
+                source: lintSource('command', 'missingValue'),
               });
             }
           }
@@ -78,17 +78,17 @@ export class CommandValidator {
                   line: lineIndex,
                   column: 0,
                   severity,
-                  source: 'maestro-lint(command.emptyValue)',
+                  source: lintSource('command', 'emptyValue'),
                 });
               }
             }
           }
 
           // Validate command properties
-          if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
+          if (isRecord(value)) {
             const allValidProps = getCommandProperties(key);
             if (allValidProps.length > 0) {
-              const valueObj = value as Record<string, unknown>;
+              const valueObj = value;
               for (const propKey of Object.keys(valueObj)) {
                 // Skip meta-properties
                 if (propKey === 'when' || propKey === 'label') {
@@ -96,7 +96,7 @@ export class CommandValidator {
                 }
 
                 if (!allValidProps.includes(propKey)) {
-                  const propLineIndex = this.findPropertyLine(lines, propKey, lineIndex);
+                  const propLineIndex = findPropertyLine(lines, propKey, lineIndex);
                   const severity = this.configManager.getRuleSeverity('command', 'invalidProperty') as Severity;
 
                   if (severity !== 'off') {
@@ -111,7 +111,7 @@ export class CommandValidator {
                       column: col,
                       endColumn: col + propKey.length,
                       severity,
-                      source: 'maestro-lint(command.invalidProperty)',
+                      source: lintSource('command', 'invalidProperty'),
                     });
                   }
                 }
@@ -150,7 +150,7 @@ export class CommandValidator {
         column: col,
         endColumn: col + name.length,
         severity,
-        source: 'maestro-lint(command.caseSensitivity)',
+        source: lintSource('command', 'caseSensitivity'),
       });
       return errors;
     }
@@ -166,36 +166,9 @@ export class CommandValidator {
       column: col,
       endColumn: col + name.length,
       severity,
-      source: 'maestro-lint(command.invalidCommand)',
+      source: lintSource('command', 'invalidCommand'),
     });
 
     return errors;
-  }
-
-  private findCommandLine(lines: string[], key: string, startLine: number): number {
-    for (let i = startLine; i < lines.length; i++) {
-      const trimmed = lines[i].trimStart();
-      if (
-        trimmed.startsWith(`- ${key}:`) ||
-        trimmed.startsWith(`- ${key}`) ||
-        trimmed === `- ${key}`
-      ) {
-        return i;
-      }
-    }
-    return startLine;
-  }
-
-  private findPropertyLine(lines: string[], key: string, startLine: number): number {
-    for (let i = startLine + 1; i < lines.length; i++) {
-      const trimmed = lines[i].trimStart();
-      if (trimmed.startsWith('- ')) {
-        break;
-      }
-      if (trimmed.startsWith(`${key}:`)) {
-        return i;
-      }
-    }
-    return startLine;
   }
 }

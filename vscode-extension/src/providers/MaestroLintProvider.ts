@@ -8,18 +8,24 @@ import { WhenValidator } from '../validators/WhenValidator';
 import { FilePathValidator } from '../validators/FilePathValidator';
 import { ArrayCommandValidator } from '../validators/ArrayCommandValidator';
 import { NestedObjectValidator } from '../validators/NestedObjectValidator';
+import { StructuralValidator } from '../validators/StructuralValidator';
 import { LintError, severityToDiagnostic } from '../models/LintError';
+import { VALID_COMMANDS } from '../constants/commands';
+import { Validator, ValidationContext } from '../validators/Validator';
+import { isRecord } from '../utils/typeGuards';
 
 export class MaestroLintProvider {
-  private diagnosticCollection!: vscode.DiagnosticCollection;
+  private readonly validators: Validator[];
   private headerValidator: HeaderValidator;
   private commandValidator: CommandValidator;
   private whenValidator: WhenValidator;
   private filePathValidator: FilePathValidator;
   private arrayCommandValidator: ArrayCommandValidator;
   private nestedObjectValidator: NestedObjectValidator;
+  private structuralValidator: StructuralValidator;
 
   constructor(
+    private diagnosticCollection: vscode.DiagnosticCollection,
     private configManager: ConfigManager,
     private outputManager: OutputManager
   ) {
@@ -29,13 +35,19 @@ export class MaestroLintProvider {
     this.filePathValidator = new FilePathValidator(configManager);
     this.arrayCommandValidator = new ArrayCommandValidator(configManager);
     this.nestedObjectValidator = new NestedObjectValidator(configManager);
+    this.structuralValidator = new StructuralValidator(configManager);
+    this.validators = [
+      this.structuralValidator,
+      this.headerValidator,
+      this.commandValidator,
+      this.filePathValidator,
+      this.arrayCommandValidator,
+      this.nestedObjectValidator,
+      this.whenValidator,
+    ];
   }
 
-  setDiagnosticCollection(collection: vscode.DiagnosticCollection): void {
-    this.diagnosticCollection = collection;
-  }
-
-  validateDocument(document: vscode.TextDocument): void {
+  async validateDocument(document: vscode.TextDocument): Promise<void> {
     const config = vscode.workspace.getConfiguration('maestroLint');
     if (!config.get<boolean>('enable', true)) {
       return;
@@ -53,7 +65,7 @@ export class MaestroLintProvider {
     }
 
     try {
-      const errors = this.lint(text, document.fileName);
+      const errors = await this.lint(text, document.fileName);
       const diagnostics = this.errorsToDiagnostics(errors, document);
       this.diagnosticCollection.set(document.uri, diagnostics);
 
@@ -74,6 +86,8 @@ export class MaestroLintProvider {
         );
         diagnostic.source = 'maestro-lint(yaml.syntax)';
         this.diagnosticCollection.set(document.uri, [diagnostic]);
+      } else {
+        this.outputManager.error(`Falha ao validar ${document.fileName}`);
       }
     }
   }
@@ -95,7 +109,7 @@ export class MaestroLintProvider {
       }
 
       total++;
-      const errors = this.lint(text, document.fileName);
+      const errors = await this.lint(text, document.fileName);
 
       if (errors.length > 0) {
         withErrors++;
@@ -112,9 +126,8 @@ export class MaestroLintProvider {
   }
 
   revalidateAll(): void {
-    // Revalidar todos os documentos abertos
-    for (const editor of vscode.window.visibleTextEditors) {
-      this.validateDocument(editor.document);
+    for (const document of vscode.workspace.textDocuments) {
+      void this.validateDocument(document);
     }
   }
 
@@ -122,20 +135,22 @@ export class MaestroLintProvider {
     this.diagnosticCollection?.clear();
   }
 
-  private lint(text: string, filePath: string): LintError[] {
+  private async lint(text: string, filePath: string): Promise<LintError[]> {
     const errors: LintError[] = [];
     const documents = text.split('---');
+    let header: Record<string, unknown> | null = null;
+    let commands: unknown[] = [];
 
     // Parse header (primeira parte)
     if (documents.length >= 1) {
       const headerText = documents[0];
       try {
         const headerObj = yaml.load(headerText) as Record<string, unknown> | null;
-        if (headerObj && typeof headerObj === 'object') {
-          errors.push(...this.headerValidator.validate(headerObj, text));
+        if (isRecord(headerObj)) {
+          header = headerObj;
         }
       } catch {
-        // Erro de parsing do header será capturado acima
+        this.outputManager.warn(`Falha no parse do header em ${filePath}`);
       }
     }
 
@@ -145,18 +160,25 @@ export class MaestroLintProvider {
       try {
         const commandsObj = yaml.load(commandsText);
         if (Array.isArray(commandsObj)) {
-          errors.push(...this.commandValidator.validate(commandsObj, text));
-          errors.push(...this.filePathValidator.validate(commandsObj, text, filePath));
-          errors.push(...this.arrayCommandValidator.validate(commandsObj, text));
-          errors.push(...this.nestedObjectValidator.validate(commandsObj, text));
+          commands = commandsObj;
         }
       } catch {
-        // Erro de parsing dos comandos
+        this.outputManager.warn(`Falha no parse de comandos em ${filePath}`);
       }
     }
 
-    // When validation (trabalha com texto diretamente)
-    errors.push(...this.whenValidator.validate(text));
+    const context: ValidationContext = {
+      text,
+      lines: text.split('\n'),
+      filePath,
+      header,
+      commands,
+    };
+
+    for (const validator of this.validators) {
+      const result = await validator.validate(context);
+      errors.push(...result);
+    }
 
     return errors.filter((e) => e.severity !== 'off');
   }
@@ -182,20 +204,11 @@ export class MaestroLintProvider {
   }
 
   private isMaestroFile(text: string): boolean {
-    // Um arquivo Maestro geralmente tem:
-    // - appId no header
-    // - separador ---
-    // - comandos como tapOn, assertVisible, etc.
+    const hasKnownCommand = VALID_COMMANDS.some((command) => text.includes(command));
+
     return (
       text.includes('appId:') ||
-      (text.includes('---') &&
-        (text.includes('tapOn') ||
-          text.includes('assertVisible') ||
-          text.includes('runFlow') ||
-          text.includes('launchApp') ||
-          text.includes('inputText') ||
-          text.includes('pressKey') ||
-          text.includes('scroll')))
+      hasKnownCommand
     );
   }
 }

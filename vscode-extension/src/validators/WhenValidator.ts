@@ -2,13 +2,15 @@ import { LintError, Severity } from '../models/LintError';
 import { VALID_WHEN_PROPERTIES, VALID_PLATFORMS } from '../constants/commands';
 import { findBestMatch } from '../utils/helpers';
 import { ConfigManager } from '../config/ConfigManager';
+import { lintSource } from '../utils/lintSource';
+import { ValidationContext, Validator } from './Validator';
 
-export class WhenValidator {
+export class WhenValidator implements Validator {
   constructor(private configManager: ConfigManager) {}
 
-  validate(text: string): LintError[] {
+  validate(context: ValidationContext): LintError[] {
     const errors: LintError[] = [];
-    const lines = text.split('\n');
+    const lines = context.lines;
     const indentationSpaces = this.configManager.getSettings().indentationSpaces;
 
     for (let i = 0; i < lines.length; i++) {
@@ -46,7 +48,7 @@ export class WhenValidator {
               column: 0,
               endColumn: propIndent,
               severity,
-              source: 'maestro-lint(when.indentation)',
+              source: lintSource('when', 'indentation'),
             });
           }
         }
@@ -69,7 +71,7 @@ export class WhenValidator {
                 column: col,
                 endColumn: col + propKey.length,
                 severity,
-                source: 'maestro-lint(when.invalidProperty)',
+                source: lintSource('when', 'invalidProperty'),
               });
             }
           }
@@ -85,7 +87,7 @@ export class WhenValidator {
                   column: propLine.indexOf(platformValue),
                   endColumn: propLine.indexOf(platformValue) + platformValue.length,
                   severity,
-                  source: 'maestro-lint(when.invalidPlatform)',
+                  source: lintSource('when', 'invalidPlatform'),
                 });
               }
             }

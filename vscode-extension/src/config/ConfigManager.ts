@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import * as fs from 'fs';
+import { promises as fs } from 'fs';
 import * as path from 'path';
 
 export interface LinterRules {
@@ -64,13 +64,13 @@ export class ConfigManager {
   private config: LinterConfig = DEFAULT_CONFIG;
 
   constructor() {
-    this.reload();
+    void this.reload();
   }
 
-  reload(): void {
+  async reload(): Promise<void> {
     const workspaceFolders = vscode.workspace.workspaceFolders;
     if (!workspaceFolders) {
-      this.config = { ...DEFAULT_CONFIG };
+      this.config = this.cloneDefaultConfig();
       return;
     }
 
@@ -79,19 +79,17 @@ export class ConfigManager {
 
     for (const folder of workspaceFolders) {
       const fullPath = path.join(folder.uri.fsPath, configPath);
-      if (fs.existsSync(fullPath)) {
-        try {
-          const rawContent = fs.readFileSync(fullPath, 'utf-8');
-          const parsed = JSON.parse(rawContent) as Partial<LinterConfig>;
-          this.config = this.mergeConfig(DEFAULT_CONFIG, parsed);
-          return;
-        } catch {
-          // Falha ao ler config, usar default
-        }
+      try {
+        const rawContent = await fs.readFile(fullPath, 'utf-8');
+        const parsed = JSON.parse(rawContent) as Partial<LinterConfig>;
+        this.config = this.mergeConfig(DEFAULT_CONFIG, parsed);
+        return;
+      } catch {
+        // Falha ao ler config, tentar próximo workspace folder
       }
     }
 
-    this.config = { ...DEFAULT_CONFIG };
+    this.config = this.cloneDefaultConfig();
   }
 
   getConfig(): LinterConfig {
@@ -118,6 +116,21 @@ export class ConfigManager {
         filePath: { ...defaults.rules.filePath, ...overrides.rules?.filePath },
       },
       settings: { ...defaults.settings, ...overrides.settings },
+    };
+  }
+
+  private cloneDefaultConfig(): LinterConfig {
+    return {
+      tags: {
+        requiredOneOf: [...DEFAULT_CONFIG.tags.requiredOneOf],
+      },
+      rules: {
+        header: { ...DEFAULT_CONFIG.rules.header },
+        command: { ...DEFAULT_CONFIG.rules.command },
+        when: { ...DEFAULT_CONFIG.rules.when },
+        filePath: { ...DEFAULT_CONFIG.rules.filePath },
+      },
+      settings: { ...DEFAULT_CONFIG.settings },
     };
   }
 }
