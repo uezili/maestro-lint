@@ -17,12 +17,7 @@ class WhenPropertyValidator {
 
     if (!this._isValidObject(whenValue)) {
       const lineNumber = text ? findLineNumber(text, 'when', commandName, commandOccurrence) : null;
-      errors.push(
-        new ValidationError(
-          ERROR_MESSAGES.WHEN_INVALID_TYPE(),
-          lineNumber
-        )
-      );
+      errors.push(new ValidationError(ERROR_MESSAGES.WHEN_INVALID_TYPE(), lineNumber));
       return errors;
     }
 
@@ -31,23 +26,13 @@ class WhenPropertyValidator {
     for (const key of whenKeys) {
       if (SIBLING_PROPERTIES.includes(key)) {
         const lineNumber = this._findLineNumber(text, key, commandName, commandOccurrence);
-        errors.push(
-          new ValidationError(
-            ERROR_MESSAGES.WHEN_PROPERTY_WRONG_LEVEL(key),
-            lineNumber
-          )
-        );
+        errors.push(new ValidationError(ERROR_MESSAGES.WHEN_PROPERTY_WRONG_LEVEL(key), lineNumber));
         continue;
       }
 
       if (!WHEN_PROPERTIES.includes(key)) {
         const lineNumber = this._findLineNumber(text, key, commandName, commandOccurrence);
-        errors.push(
-          new ValidationError(
-            ERROR_MESSAGES.WHEN_INVALID_PROPERTY(key, WHEN_PROPERTIES),
-            lineNumber
-          )
-        );
+        errors.push(new ValidationError(ERROR_MESSAGES.WHEN_INVALID_PROPERTY(key, WHEN_PROPERTIES), lineNumber));
       }
     }
 
@@ -70,23 +55,13 @@ class WhenPropertyValidator {
 
     if (typeof whenValue.platform !== 'string') {
       const lineNumber = findLineNumber(text, 'platform', commandName, commandOccurrence);
-      errors.push(
-        new ValidationError(
-          ERROR_MESSAGES.WHEN_PLATFORM_INVALID_TYPE(),
-          lineNumber
-        )
-      );
+      errors.push(new ValidationError(ERROR_MESSAGES.WHEN_PLATFORM_INVALID_TYPE(), lineNumber));
       return errors;
     }
 
     if (!isValidPlatform(whenValue.platform)) {
       const lineNumber = findLineNumber(text, 'platform', commandName, commandOccurrence);
-      errors.push(
-        new ValidationError(
-          ERROR_MESSAGES.WHEN_PLATFORM_INVALID_VALUE(whenValue.platform),
-          lineNumber
-        )
-      );
+      errors.push(new ValidationError(ERROR_MESSAGES.WHEN_PLATFORM_INVALID_VALUE(whenValue.platform), lineNumber));
     }
 
     return errors;
@@ -105,12 +80,7 @@ class WhenPropertyValidator {
         const value = whenValue[prop];
         if (this._isEmpty(value)) {
           const lineNumber = findLineNumber(text, prop);
-          errors.push(
-            new ValidationError(
-              ERROR_MESSAGES.WHEN_PROPERTY_EMPTY(prop),
-              lineNumber
-            )
-          );
+          errors.push(new ValidationError(ERROR_MESSAGES.WHEN_PROPERTY_EMPTY(prop), lineNumber));
         }
       }
     }
@@ -139,9 +109,7 @@ class WhenPropertyValidator {
    * @private
    */
   _findLineNumber(text, key, commandName, commandOccurrence) {
-    return text
-      ? findLineNumber(text, key, commandName, commandOccurrence) || findLineNumber(text, key)
-      : null;
+    return text ? findLineNumber(text, key, commandName, commandOccurrence) || findLineNumber(text, key) : null;
   }
 }
 

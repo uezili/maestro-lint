@@ -22,8 +22,7 @@ function detectErrorsInDocument(docText, lineOffset = 0) {
       break;
     } catch (error) {
       const errorMsg = error.message;
-      const actualLine =
-        error.mark && error.mark.line !== undefined ? error.mark.line + 1 + lineOffset : null;
+      const actualLine = error.mark && error.mark.line !== undefined ? error.mark.line + 1 + lineOffset : null;
 
       const isParsingError =
         errorMsg.toLowerCase().includes('indentation') ||

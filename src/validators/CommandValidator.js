@@ -76,30 +76,17 @@ class CommandValidator {
 
     const similarCommand = VALID_COMMANDS.find(vc => vc.toLowerCase() === commandName.toLowerCase());
     if (similarCommand) {
-      errors.push(
-        new ValidationError(
-          ERROR_MESSAGES.COMMAND_TYPO(commandName, similarCommand),
-          lineNumber
-        )
-      );
+      errors.push(new ValidationError(ERROR_MESSAGES.COMMAND_TYPO(commandName, similarCommand), lineNumber));
       return errors;
     }
 
     const closeMatch = findSimilarString(commandName, VALID_COMMANDS, LIMITS.LEVENSHTEIN_TOLERANCE);
     if (closeMatch) {
       errors.push(
-        new ValidationError(
-          ERROR_MESSAGES.COMMAND_INVALID_WITH_SUGGESTION(commandName, closeMatch),
-          lineNumber
-        )
+        new ValidationError(ERROR_MESSAGES.COMMAND_INVALID_WITH_SUGGESTION(commandName, closeMatch), lineNumber)
       );
     } else {
-      errors.push(
-        new ValidationError(
-          ERROR_MESSAGES.COMMAND_INVALID(commandName),
-          lineNumber
-        )
-      );
+      errors.push(new ValidationError(ERROR_MESSAGES.COMMAND_INVALID(commandName), lineNumber));
     }
 
     return errors;

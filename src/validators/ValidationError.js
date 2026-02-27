@@ -69,12 +69,13 @@ class ValidationError {
   }
 
   toString() {
-    const prefix = {
-      error: '❌',
-      warning: '⚠️ ',
-      info: 'ℹ️ ',
-      off: ''
-    }[this.severity] || '';
+    const prefix =
+      {
+        error: '❌ ',
+        warning: '⚠️ ',
+        info: 'ℹ️ ',
+        off: ''
+      }[this.severity] || '';
 
     if (this.lineNumber) {
       return `${prefix} Linha ${this.lineNumber}: ${this.message}`;

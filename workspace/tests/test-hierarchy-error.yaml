@@ -20,7 +20,7 @@ onFlowComplete:
     when:
       platform: android
       commands:
-      - tapOn: '.*Número do celular.*'
+        - tapOn: '.*Número do celular.*'
 
 # ============================================================================
 # TESTE 2: CORRETO - commands no mesmo nível de when

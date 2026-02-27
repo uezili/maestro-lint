@@ -20,8 +20,14 @@
       "above",
       "optional",
       "enabled",
-      "when",
-      "rightOf"
+      "rightOf",
+      "below",
+      "leftOf",
+      "childOf",
+      "containsChild",
+      "containsDescendants",
+      "traits",
+      "label"
     ],
     "requiresValue": true
   },
@@ -38,8 +44,7 @@
       "index",
       "above",
       "optional",
-      "enabled",
-      "when"
+      "enabled"
     ],
     "requiresValue": true
   },
@@ -56,8 +61,7 @@
       "index",
       "above",
       "optional",
-      "enabled",
-      "when"
+      "enabled"
     ],
     "requiresValue": true
   },
@@ -73,7 +77,7 @@
     ],
     "requiresValue": true
   },
-  "assertNoDefectsWithAi": {
+  "assertNoDefectsWithAI": {
     "properties": [],
     "optional": [],
     "requiresValue": true
@@ -211,7 +215,8 @@
       "from",
       "direction",
       "start",
-      "end"
+      "end",
+      "duration"
     ],
     "requiresValue": true
   },
@@ -247,7 +252,8 @@
       "env",
       "when",
       "file",
-      "commands"
+      "commands",
+      "label"
     ]
   },
   "runScript": {
@@ -284,7 +290,12 @@
   "launchApp": {
     "properties": [],
     "optional": [
+      "appId",
       "clearState",
+      "arguments",
+      "clearKeychain",
+      "stopApp",
+      "permissions",
       "arguments"
     ]
   },
@@ -334,5 +345,39 @@
     "optional": [
       "timeout"
     ]
+  },
+  "inputRandomNumber": {
+    "properties": [],
+    "optional": [
+      "min",
+      "max",
+      "length"
+    ],
+    "requiresValue": false
+  },
+  "inputRandomColorName": {
+    "properties": [],
+    "optional": [],
+    "requiresValue": false
+  },
+  "inputRandomPersonName": {
+    "properties": [],
+    "optional": [],
+    "requiresValue": false
+  },
+  "inputRandomText": {
+    "properties": [],
+    "optional": [],
+    "requiresValue": false
+  },
+  "inputRandomCityName": {
+    "properties": [],
+    "optional": [],
+    "requiresValue": false
+  },
+  "inputRandomCountryName": {
+    "properties": [],
+    "optional": [],
+    "requiresValue": false
   }
 }

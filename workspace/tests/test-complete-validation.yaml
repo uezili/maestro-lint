@@ -19,50 +19,50 @@ env:
 # Comandos de navegação e toque
 - tapOn: 'Botão Login'
 - tapOn:
-      id: 'button_submit'
+    id: 'button_submit'
 - tapOn:
-      text: 'Continuar'
-      retryTapIfNoChange: true
+    text: 'Continuar'
+    retryTapIfNoChange: true
 - tapOn:
-      point: '50%,50%'
+    point: '50%,50%'
 - doubleTapOn: 'Item'
 - doubleTapOn:
-      id: 'card_view'
-      delay: 150
+    id: 'card_view'
+    delay: 150
 - longPressOn: 'Menu'
 - longPressOn:
-      text: 'Link'
-      point: '90%,50%'
+    text: 'Link'
+    point: '90%,50%'
 
 # Comandos de entrada de texto
 - inputText: 'usuario@email.com'
 - eraseText
 - pasteText
 - copyTextFrom:
-      id: 'text_value'
+    id: 'text_value'
 
 # Comandos de asserção
 - assertVisible: 'Mensagem de sucesso'
 - assertNotVisible: 'Erro'
 - assertTrue:
-      condition: ${output.value == 'expected'}
-      label: 'Validação de valor'
+    condition: ${output.value == 'expected'}
+    label: 'Validação de valor'
 
 # Comandos de scroll
 - scroll
 - scrollUntilVisible:
-      element:
-          id: 'item_bottom'
-      direction: DOWN
-      timeout: 30000
-      speed: 50
-      visibilityPercentage: 100
-      centerElement: false
+    element:
+      id: 'item_bottom'
+    direction: DOWN
+    timeout: 30000
+    speed: 50
+    visibilityPercentage: 100
+    centerElement: false
 
 # Comandos de swipe
 - swipe:
-      start: '90%,50%'
-      end: '10%,50%'
+    start: '90%,50%'
+    end: '10%,50%'
 
 # Comandos de teclas
 - pressKey: enter
@@ -71,14 +71,14 @@ env:
 # Comandos de espera
 - waitForAnimationToEnd
 - waitForAnimationToEnd:
-      timeout: 5000
+    timeout: 5000
 - extendedWaitUntil:
-      visible: 'Conteúdo carregado'
-      timeout: 15000
+    visible: 'Conteúdo carregado'
+    timeout: 15000
 - extendedWaitUntil:
-      notVisible:
-          id: 'loading_spinner'
-      timeout: 10000
+    notVisible:
+      id: 'loading_spinner'
+    timeout: 10000
 
 # Comandos de controle de fluxo com when
 # - runFlow:
@@ -90,34 +90,34 @@ env:
 #       platform: ios
 #     file: 'ios/menu-ios.yaml'
 - runFlow:
-      when:
-        visible: 'Popup'
-      commands:
-        - tapOn: 'Fechar'
+    when:
+      visible: 'Popup'
+    commands:
+      - tapOn: 'Fechar'
 - runFlow:
-      when:
-        notVisible: 'Loading'
-      commands:
-        - tapOn: 'Avançar'
+    when:
+      notVisible: 'Loading'
+    commands:
+      - tapOn: 'Avançar'
 
 # Comandos repeat
 - repeat:
-      times: 3
-      commands:
-        - tapOn: 'Next'
-        - scroll
+    times: 3
+    commands:
+      - tapOn: 'Next'
+      - scroll
 - repeat:
-      while:
-          notVisible: 'Final'
-      commands:
-        - scroll
+    while:
+      notVisible: 'Final'
+    commands:
+      - scroll
 
 # Comandos retry
 - retry:
-      maxRetries: 3
-      commands:
-        - tapOn:
-              id: 'dynamic_button'
+    maxRetries: 3
+    commands:
+      - tapOn:
+          id: 'dynamic_button'
 
 # Scripts
 # - runScript: scripts/generate-data.js
@@ -131,4 +131,4 @@ env:
 # Captura de tela
 - takeScreenshot: 'resultado_final'
 - takeScreenshot:
-      path: 'tela_sucesso'
+    path: 'tela_sucesso'

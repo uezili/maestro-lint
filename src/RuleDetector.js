@@ -7,7 +7,11 @@ const RULE_PATTERNS = [
   // Header rules
   { pattern: /appId ausente|Parâmetro appId ausente/, category: 'header', ruleType: 'appId' },
   { pattern: /tags ausente|Parâmetro tags ausente/, category: 'header', ruleType: 'tags' },
-  { pattern: /Propriedade de header inválida|Propriedade inválida no cabeçalho/, category: 'header', ruleType: 'invalidProperty' },
+  {
+    pattern: /Propriedade de header inválida|Propriedade inválida no cabeçalho/,
+    category: 'header',
+    ruleType: 'invalidProperty'
+  },
 
   // When rules
   { pattern: /propriedade inválida.*em 'when'/, category: 'when', ruleType: 'invalidProperty' },
@@ -20,7 +24,11 @@ const RULE_PATTERNS = [
 
   // Command rules
   { pattern: /comando inválido/, category: 'command', ruleType: 'invalidCommand' },
-  { pattern: /propriedade inválida|deve ter pelo menos uma propriedade/, category: 'command', ruleType: 'invalidProperty' },
+  {
+    pattern: /propriedade inválida|deve ter pelo menos uma propriedade/,
+    category: 'command',
+    ruleType: 'invalidProperty'
+  },
   { pattern: /requer um valor/, category: 'command', ruleType: 'missingValue' },
   { pattern: /está vazio|valor vazio/, category: 'command', ruleType: 'emptyValue' }
 ];

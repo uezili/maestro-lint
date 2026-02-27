@@ -18,22 +18,12 @@ class ArrayCommandValidator {
     const lineNumber = text ? findLineNumber(text, commandName, null, occurrence) : null;
 
     if (!schema.isArrayCommand) {
-      errors.push(
-        ValidationError.create(
-          ARRAY_COMMAND_MESSAGES.NOT_SUPPORTED(commandName),
-          lineNumber
-        )
-      );
+      errors.push(ValidationError.create(ARRAY_COMMAND_MESSAGES.NOT_SUPPORTED(commandName), lineNumber));
       return errors;
     }
 
     if (commandValue.length === 0) {
-      errors.push(
-        ValidationError.create(
-          ARRAY_COMMAND_MESSAGES.EMPTY_ARRAY(commandName),
-          lineNumber
-        )
-      );
+      errors.push(ValidationError.create(ARRAY_COMMAND_MESSAGES.EMPTY_ARRAY(commandName), lineNumber));
       return errors;
     }
 
@@ -42,12 +32,7 @@ class ArrayCommandValidator {
       const itemLineNumber = text ? findLineNumber(text, item, null, 1) : lineNumber;
 
       if (typeof item !== 'string') {
-        errors.push(
-          ValidationError.create(
-            ARRAY_COMMAND_MESSAGES.ITEM_NOT_STRING(commandName, i + 1),
-            itemLineNumber
-          )
-        );
+        errors.push(ValidationError.create(ARRAY_COMMAND_MESSAGES.ITEM_NOT_STRING(commandName, i + 1), itemLineNumber));
         continue;
       }
 
@@ -80,26 +65,16 @@ class ArrayCommandValidator {
     const errors = [];
 
     if (!path || path.trim() === '') {
-      errors.push(
-        ValidationError.create(
-          ARRAY_COMMAND_MESSAGES.PATH_EMPTY(commandName, itemIndex),
-          lineNumber
-        )
-      );
+      errors.push(ValidationError.create(ARRAY_COMMAND_MESSAGES.PATH_EMPTY(commandName, itemIndex), lineNumber));
       return errors;
     }
 
     if (!path.startsWith('./') && !path.startsWith('../')) {
-      errors.push(
-        ValidationError.create(
-          ARRAY_COMMAND_MESSAGES.PATH_NOT_RELATIVE(commandName, itemIndex),
-          lineNumber
-        )
-      );
+      errors.push(ValidationError.create(ARRAY_COMMAND_MESSAGES.PATH_NOT_RELATIVE(commandName, itemIndex), lineNumber));
     }
 
     const hasValidExtension = MEDIA_EXTENSIONS.some(ext => path.toLowerCase().endsWith(ext));
-    
+
     if (!hasValidExtension) {
       errors.push(
         ValidationError.create(
@@ -120,23 +95,13 @@ class ArrayCommandValidator {
     const errors = [];
 
     if (!url || url.trim() === '') {
-      errors.push(
-        ValidationError.create(
-          ARRAY_COMMAND_MESSAGES.URL_EMPTY(commandName, itemIndex),
-          lineNumber
-        )
-      );
+      errors.push(ValidationError.create(ARRAY_COMMAND_MESSAGES.URL_EMPTY(commandName, itemIndex), lineNumber));
       return errors;
     }
 
     const urlPattern = /^https?:\/\/.+/i;
     if (!urlPattern.test(url)) {
-      errors.push(
-        ValidationError.create(
-          ARRAY_COMMAND_MESSAGES.URL_INVALID(commandName, itemIndex),
-          lineNumber
-        )
-      );
+      errors.push(ValidationError.create(ARRAY_COMMAND_MESSAGES.URL_INVALID(commandName, itemIndex), lineNumber));
     }
 
     return errors;

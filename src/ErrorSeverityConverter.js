@@ -29,14 +29,14 @@ class ErrorSeverityConverter {
       message = String(error);
     }
 
-    message = message.replace(/^❌\s*/, '').replace(/^⚠️\s*/, '').replace(/^ℹ️\s*/, '');
+    message = message
+      .replace(/^❌\s*/, '')
+      .replace(/^⚠️\s*/, '')
+      .replace(/^ℹ️\s*/, '');
 
     const severity = ConfigManager.getSeverity(category, ruleType);
 
-    return ValidationError.create(message)
-      .atLine(lineNumber)
-      .withSeverity(severity)
-      .forRule(category, ruleType);
+    return ValidationError.create(message).atLine(lineNumber).withSeverity(severity).forRule(category, ruleType);
   }
 
   /**

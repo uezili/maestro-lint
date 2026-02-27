@@ -5,31 +5,32 @@
   "rules": {
     "header": {
       "appId": "error",
-      "tags": "error",
+      "tags": "off",
       "name": "off",
-      "env": "warning",
+      "env": "off",
       "onFlowStart": "off",
       "onFlowComplete": "off",
       "invalidProperty": "warning"
     },
     "command": {
       "invalidCommand": "error",
-      "invalidProperty": "warning",
+      "invalidProperty": "error",
       "missingValue": "error",
       "emptyValue": "warning"
     },
     "when": {
-      "invalidProperty": "info",
+      "invalidProperty": "error",
       "invalidPlatform": "error",
       "indentation": "warning"
     },
     "filePath": {
       "fileNotFound": "error",
-      "invalidPath": "warning"
+      "invalidPath": "error"
     }
   },
   "settings": {
     "reportUnusedDisableDirectives": "warning",
-    "maxWarnings": -1
+    "maxWarnings": -1,
+    "indentationSpaces": 2
   }
 }
