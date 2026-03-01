@@ -108,29 +108,3 @@ androidWebViewHierarchy: chromium
     permissions:
       wifi: allow
       camera: granted
-
-# ══════════════════════════════════════════════════════════════
-# CHECKLIST DE ERROS ESPERADOS
-# ══════════════════════════════════════════════════════════════
-# Header:
-#   1. androidWebViewHierarchy: chromium          → header.invalidValue
-#
-# Comandos (setOrientation):
-#   2. setOrientation: DIAGONAL                   → command.invalidValue
-#   3. setOrientation: landscape_left             → command.invalidValue
-#   4. setOrientation: horizontal                 → command.invalidValue
-#   5. setOrientation: portrait                   → command.invalidValue
-#
-# When (platform):
-#   6. platform: windows                          → when.invalidValue
-#   7. platform: desktop                          → when.invalidValue
-#   8. platform: mobile                           → when.invalidValue
-#
-# Outros:
-#   9. setOrientaton: PORTRAIT                    → command.invalidCommand (typo)
-#  10. tapOn: txt                                 → command.invalidProperty
-#  11. inputText: (vazio)                         → command.missingValue + emptyValue
-#  12. setorientation: PORTRAIT                   → command.caseSensitivity
-#  13. when: visibl                               → when.invalidProperty
-#  14. setPermissions: wifi + granted             → nestedObject errors
-# ══════════════════════════════════════════════════════════════
