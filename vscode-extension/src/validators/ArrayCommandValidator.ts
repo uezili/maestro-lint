@@ -7,7 +7,7 @@ import { isRecord } from '../utils/typeGuards';
 import { ValidationContext, Validator } from './Validator';
 
 export class ArrayCommandValidator implements Validator {
-  constructor(private configManager: ConfigManager) {}
+  constructor(private readonly configManager: ConfigManager) {}
 
   validate(context: ValidationContext): LintError[] {
     const errors: LintError[] = [];

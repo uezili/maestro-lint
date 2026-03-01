@@ -3,7 +3,7 @@
  * Com caching para evitar recálculos
  */
 class LevenshteinCache {
-  private cache = new Map<string, number>();
+  private readonly cache = new Map<string, number>();
 
   distance(a: string, b: string): number {
     const key = this.createKey(a, b);

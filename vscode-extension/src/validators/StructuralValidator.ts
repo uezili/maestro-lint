@@ -4,13 +4,29 @@ import { lintSource } from '../utils/lintSource';
 import { ConfigManager } from '../config/ConfigManager';
 import { ValidationContext, Validator } from './Validator';
 
+interface CommandItemIndentationContext {
+  allowsDeeperNesting: boolean;
+  trimmed: string;
+  indent: number;
+  expectedNestedIndent: number;
+  commandName: string;
+  blockName: string;
+  lineText: string;
+  lineIndex: number;
+  severity: Severity;
+}
+
 /**
  * Text-based structural validator that detects indentation hierarchy
  * errors in command blocks. Runs on raw text without depending on
  * YAML parsing, so it catches issues even when the YAML is malformed.
  */
 export class StructuralValidator implements Validator {
-  constructor(private configManager: ConfigManager) {}
+  private static readonly COMMAND_PATTERN = /^- ([A-Za-z_]\w*)\s*:/;
+  private static readonly KEY_PATTERN = /^([A-Za-z_][A-Za-z0-9_-]*)\s*:/;
+  private static readonly COMMAND_ITEM_PATTERN = /^- ([A-Za-z_]\w*)(?:\s*:|$)/;
+
+  constructor(private readonly configManager: ConfigManager) {}
 
   validate(context: ValidationContext): LintError[] {
     const errors: LintError[] = [];
@@ -26,7 +42,7 @@ export class StructuralValidator implements Validator {
       const trimmed = line.trimStart();
 
       // Detect `- commandName:` lines
-      const commandMatch = trimmed.match(/^- ([A-Za-z_][A-Za-z0-9_]*)\s*:/);
+      const commandMatch = StructuralValidator.COMMAND_PATTERN.exec(trimmed);
       if (!commandMatch) {
         continue;
       }
@@ -72,50 +88,42 @@ export class StructuralValidator implements Validator {
     severity: Severity
   ): LintError[] {
     const errors: LintError[] = [];
-    const blocksWithProperties = new Set(['env', 'when', 'commands']); // blocos que contêm sub-propriedades
 
     for (let i = commandLineIndex + 1; i < lines.length; i++) {
       const line = lines[i];
       const trimmed = line.trimStart();
 
-      if (trimmed === '' || trimmed.startsWith('#')) {
+      if (this.isIgnorableLine(trimmed)) {
         continue;
       }
 
-      const indent = line.length - trimmed.length;
+      const indent = this.getIndentation(line, trimmed);
 
       // We left the block if indent is at or below the command level
-      if (indent <= commandIndent) {
+      if (this.hasExitedBlock(indent, commandIndent)) {
         break;
       }
 
-      const keyMatch = trimmed.match(/^([A-Za-z_][A-Za-z0-9_-]*)\s*:/);
-      if (!keyMatch) {
-        continue;
-      }
-
-      const propertyKey = keyMatch[1];
-
-      // Only check known properties of this command
-      if (!validProps.includes(propertyKey)) {
+      const propertyKey = this.extractKey(trimmed);
+      if (!propertyKey || !validProps.includes(propertyKey)) {
         continue;
       }
 
       // Propriedade esperada deveria estar no nível expectedPropIndent
       if (indent !== expectedPropIndent) {
-        const col = line.indexOf(propertyKey);
-        errors.push({
-          message: `${commandName}: propriedade "${propertyKey}" está com indentação incorreta (${indent} espaços). Deve estar no nível ${expectedPropIndent} (mesmo nível das demais propriedades do comando).`,
-          line: i,
-          column: col >= 0 ? col : 0,
-          endColumn: col >= 0 ? col + propertyKey.length : propertyKey.length,
-          severity,
-          source: lintSource('command', 'indentation'),
-        });
+        errors.push(
+          this.createIndentationError(
+            `${commandName}: propriedade "${propertyKey}" está com indentação incorreta (${indent} espaços). Deve estar no nível ${expectedPropIndent} (mesmo nível das demais propriedades do comando).`,
+            line,
+            propertyKey,
+            i,
+            severity
+          )
+        );
       }
 
       // Se é um bloco aninhado (env, when, commands), valida as sub-propriedades
-      if (blocksWithProperties.has(propertyKey)) {
+      if (this.isNestedBlockProperty(propertyKey)) {
         const expectedNestedIndent = expectedPropIndent + 2;
         errors.push(
           ...this.checkNestedBlockIndentation(
@@ -150,58 +158,49 @@ export class StructuralValidator implements Validator {
       const line = lines[i];
       const trimmed = line.trimStart();
 
-      if (trimmed === '' || trimmed.startsWith('#')) {
+      if (this.isIgnorableLine(trimmed)) {
         continue;
       }
 
-      const indent = line.length - trimmed.length;
+      const indent = this.getIndentation(line, trimmed);
 
       // Exit nested block if we return to the parent command's indentation level or less
       // If indent === blockIndent, we've returned to sibling properties of the command
       // If indent < blockIndent, we've exited the command entirely
-      if (indent < blockIndent) {
+      if (this.isAboveParentBlock(indent, blockIndent)) {
         break;
       }
 
       // If indent === blockIndent, we're back at the command level (sibling properties)
       // These should not be validated as nested block properties
-      if (indent === blockIndent) {
+      if (this.isAtParentBlockLevel(indent, blockIndent)) {
         break;
       }
 
-      // In `commands`, list items (`- cmd`) must be direct children of the
-      // block and therefore must keep the expected indentation.
-      // Properties of these command objects can have deeper indentation.
-      if (allowsDeeperNesting && trimmed.startsWith('- ')) {
-        const itemMatch = trimmed.match(/^- ([A-Za-z_][A-Za-z0-9_]*)(?:\s*:|$)/);
-        if (!itemMatch) {
-          continue;
-        }
+      const commandItemError = this.validateCommandItemIndentation({
+        allowsDeeperNesting,
+        trimmed,
+        indent,
+        expectedNestedIndent,
+        commandName,
+        blockName,
+        lineText: line,
+        lineIndex: i,
+        severity,
+      });
 
-        const itemKey = itemMatch[1];
-        if (indent !== expectedNestedIndent) {
-          const col = line.indexOf(itemKey);
-          errors.push({
-            message: `${commandName}: propriedade "${itemKey}" em "${blockName}" está com indentação incorreta (${indent} espaços). Deve estar no nível ${expectedNestedIndent}.`,
-            line: i,
-            column: col >= 0 ? col : 0,
-            endColumn: col >= 0 ? col + itemKey.length : itemKey.length,
-            severity,
-            source: lintSource('command', 'indentation'),
-          });
-        }
+      if (commandItemError) {
+        errors.push(commandItemError);
         continue;
       }
 
-      const keyMatch = trimmed.match(/^([A-Za-z_][A-Za-z0-9_-]*)\s*:/);
-      if (!keyMatch) {
+      const nestedKey = this.extractKey(trimmed);
+      if (!nestedKey) {
         continue;
       }
-
-      const nestedKey = keyMatch[1];
 
       // Only validate keys that are direct children of the nested block
-      if (indent === expectedNestedIndent) {
+      if (this.isExpectedNestedIndent(indent, expectedNestedIndent)) {
         // This is a direct child of the nested block - validate its indentation
         // (already correct if we got here)
         continue;
@@ -209,22 +208,117 @@ export class StructuralValidator implements Validator {
 
       // In blocks that allow nested arrays/objects (`commands`), deeper
       // indentation can be valid (e.g. properties of `- tapOn:`).
-      if (allowsDeeperNesting && indent > expectedNestedIndent) {
+      if (this.isAllowedDeeperNesting(allowsDeeperNesting, indent, expectedNestedIndent)) {
         continue;
       }
 
       // If we get here, indent is incorrect for this nested block
-      const col = line.indexOf(nestedKey);
-      errors.push({
-        message: `${commandName}: propriedade "${nestedKey}" em "${blockName}" está com indentação incorreta (${indent} espaços). Deve estar no nível ${expectedNestedIndent}.`,
-        line: i,
-        column: col >= 0 ? col : 0,
-        endColumn: col >= 0 ? col + nestedKey.length : nestedKey.length,
-        severity,
-        source: lintSource('command', 'indentation'),
-      });
+      errors.push(
+        this.createIndentationError(
+          `${commandName}: propriedade "${nestedKey}" em "${blockName}" está com indentação incorreta (${indent} espaços). Deve estar no nível ${expectedNestedIndent}.`,
+          line,
+          nestedKey,
+          i,
+          severity
+        )
+      );
     }
 
     return errors;
+  }
+
+  private isIgnorableLine(trimmed: string): boolean {
+    return trimmed === '' || trimmed.startsWith('#');
+  }
+
+  private getIndentation(line: string, trimmed: string): number {
+    return line.length - trimmed.length;
+  }
+
+  private hasExitedBlock(indent: number, baseIndent: number): boolean {
+    return indent <= baseIndent;
+  }
+
+  private isAboveParentBlock(indent: number, blockIndent: number): boolean {
+    return indent < blockIndent;
+  }
+
+  private isAtParentBlockLevel(indent: number, blockIndent: number): boolean {
+    return indent === blockIndent;
+  }
+
+  private isExpectedNestedIndent(indent: number, expectedNestedIndent: number): boolean {
+    return indent === expectedNestedIndent;
+  }
+
+  private isAllowedDeeperNesting(
+    allowsDeeperNesting: boolean,
+    indent: number,
+    expectedNestedIndent: number
+  ): boolean {
+    return allowsDeeperNesting && indent > expectedNestedIndent;
+  }
+
+  private extractKey(trimmed: string): string | null {
+    const keyMatch = StructuralValidator.KEY_PATTERN.exec(trimmed);
+    return keyMatch ? keyMatch[1] : null;
+  }
+
+  private isNestedBlockProperty(propertyKey: string): boolean {
+    return propertyKey === 'env' || propertyKey === 'when' || propertyKey === 'commands';
+  }
+
+  private validateCommandItemIndentation(context: CommandItemIndentationContext): LintError | null {
+    const {
+      allowsDeeperNesting,
+      trimmed,
+      indent,
+      expectedNestedIndent,
+      commandName,
+      blockName,
+      lineText,
+      lineIndex,
+      severity,
+    } = context;
+
+    if (!allowsDeeperNesting || !trimmed.startsWith('- ')) {
+      return null;
+    }
+
+    const itemMatch = StructuralValidator.COMMAND_ITEM_PATTERN.exec(trimmed);
+    if (!itemMatch) {
+      return null;
+    }
+
+    const itemKey = itemMatch[1];
+    if (indent === expectedNestedIndent) {
+      return null;
+    }
+
+    return this.createIndentationError(
+      `${commandName}: propriedade "${itemKey}" em "${blockName}" está com indentação incorreta (${indent} espaços). Deve estar no nível ${expectedNestedIndent}.`,
+      lineText,
+      itemKey,
+      lineIndex,
+      severity
+    );
+  }
+
+  private createIndentationError(
+    message: string,
+    lineText: string,
+    key: string,
+    lineIndex: number,
+    severity: Severity
+  ): LintError {
+    const col = lineText.indexOf(key);
+    return {
+      message,
+      line: lineIndex,
+      column: Math.max(0, col),
+      endColumn: col >= 0 ? col + key.length : key.length,
+      severity,
+      source: lintSource('command', 'indentation'),
+    };
   }
 }

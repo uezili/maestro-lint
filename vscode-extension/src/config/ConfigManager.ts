@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
-import { promises as fs } from 'fs';
-import * as path from 'path';
+import { promises as fs } from 'node:fs';
+import * as path from 'node:path';
 
 export interface LinterRules {
   header: Record<string, string>;
@@ -62,10 +62,6 @@ const DEFAULT_CONFIG: LinterConfig = {
 
 export class ConfigManager {
   private config: LinterConfig = DEFAULT_CONFIG;
-
-  constructor() {
-    void this.reload();
-  }
 
   async reload(): Promise<void> {
     const workspaceFolders = vscode.workspace.workspaceFolders;

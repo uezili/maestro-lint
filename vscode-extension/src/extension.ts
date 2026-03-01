@@ -14,6 +14,7 @@ export function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(outputManager);
 
   const configManager = new ConfigManager();
+  void configManager.reload();
 
   const diagnosticCollection = vscode.languages.createDiagnosticCollection('maestro-lint');
   context.subscriptions.push(diagnosticCollection);
@@ -64,7 +65,7 @@ export function activate(context: vscode.ExtensionContext) {
     }),
 
     vscode.commands.registerCommand('maestroLint.validateWorkspace', () => {
-      lintProvider.validateWorkspace();
+      void lintProvider.validateWorkspace();
     }),
 
     vscode.commands.registerCommand('maestroLint.restart', () => {

@@ -6,7 +6,7 @@ import { lintSource } from '../utils/lintSource';
 import { ValidationContext, Validator } from './Validator';
 
 export class WhenValidator implements Validator {
-  constructor(private configManager: ConfigManager) {}
+  constructor(private readonly configManager: ConfigManager) {}
 
   private normalizeScalarValue(value: string): string {
     const trimmed = value.trim();
@@ -33,84 +33,146 @@ export class WhenValidator implements Validator {
         continue;
       }
 
-      const whenIndent = line.length - trimmed.length;
-      const expectedPropertyIndent = whenIndent + indentationSpaces;
-
-      for (let j = i + 1; j < lines.length; j++) {
-        const propLine = lines[j];
-        const propTrimmed = propLine.trimStart();
-
-        if (propTrimmed === '' || propTrimmed.startsWith('#')) {
-          continue;
-        }
-
-        const propIndent = propLine.length - propTrimmed.length;
-
-        if (propIndent <= whenIndent) {
-          break;
-        }
-
-        if (propIndent !== expectedPropertyIndent) {
-          const severity = this.configManager.getRuleSeverity('when', 'indentation') as Severity;
-          if (severity !== 'off') {
-            const propKey = propTrimmed.split(':')[0].trim();
-            errors.push({
-              message: `Indentação incorreta em propriedade '${propKey}' sob 'when:'. Esperado ${expectedPropertyIndent} espaços, encontrado ${propIndent}.`,
-              line: j,
-              column: 0,
-              endColumn: propIndent,
-              severity,
-              source: lintSource('when', 'indentation'),
-            });
-          }
-        }
-
-        const colonIndex = propTrimmed.indexOf(':');
-        if (colonIndex > 0) {
-          const propKey = propTrimmed.substring(0, colonIndex).trim();
-
-          if (!VALID_WHEN_PROPERTIES.includes(propKey)) {
-            const severity = this.configManager.getRuleSeverity('when', 'invalidProperty') as Severity;
-            if (severity !== 'off') {
-              const suggestion = findBestMatch(propKey, VALID_WHEN_PROPERTIES);
-              const col = propLine.indexOf(propKey);
-              const msg = suggestion
-                ? `Propriedade inválida em 'when': "${propKey}". correto: "${suggestion}"`
-                : `Propriedade inválida em 'when': "${propKey}".`;
-              errors.push({
-                message: msg,
-                line: j,
-                column: col,
-                endColumn: col + propKey.length,
-                severity,
-                source: lintSource('when', 'invalidProperty'),
-              });
-            }
-          }
-
-          const whenSchema = WHEN_PROPERTY_SCHEMA[propKey];
-          if (whenSchema?.allowedValues) {
-            const propValue = propTrimmed.substring(colonIndex + 1).trim();
-            const normalizedValue = this.normalizeScalarValue(propValue);
-            if (propValue && !whenSchema.allowedValues.includes(normalizedValue)) {
-              const severity = this.configManager.getRuleSeverity('when', 'invalidValue') as Severity;
-              if (severity !== 'off') {
-                const col = propLine.indexOf(propValue);
-                errors.push({
-                  message: `Valor inválido "${propValue}" para "${propKey}" em 'when'. Valores aceitos: ${whenSchema.allowedValues.join(', ')}`,
-                  line: j,
-                  column: col,
-                  endColumn: col + propValue.length,
-                  severity,
-                  source: lintSource('when', 'invalidValue'),
-                });
-              }
-            }
-          }
-        }
-      }
+      errors.push(...this.validateWhenBlock(lines, i, indentationSpaces));
     }
 
     return errors;
+  }
+
+  private validateWhenBlock(lines: string[], whenLineIndex: number, indentationSpaces: number): LintError[] {
+    const errors: LintError[] = [];
+    const whenLine = lines[whenLineIndex];
+    const whenTrimmed = whenLine.trimStart();
+    const whenIndent = whenLine.length - whenTrimmed.length;
+    const expectedPropertyIndent = whenIndent + indentationSpaces;
+
+    for (let j = whenLineIndex + 1; j < lines.length; j++) {
+      const propLine = lines[j];
+      const propTrimmed = propLine.trimStart();
+
+      if (propTrimmed === '' || propTrimmed.startsWith('#')) {
+        continue;
+      }
+
+      const propIndent = propLine.length - propTrimmed.length;
+      if (propIndent <= whenIndent) {
+        break;
+      }
+
+      const lineErrors = [
+        ...this.validateWhenPropertyIndentation(propTrimmed, propIndent, expectedPropertyIndent, j),
+        ...this.validateWhenPropertyKeyValue(propLine, propTrimmed, j),
+      ];
+      errors.push(...lineErrors);
+    }
+
+    return errors;
+  }
+
+  private validateWhenPropertyIndentation(
+    propTrimmed: string,
+    propIndent: number,
+    expectedPropertyIndent: number,
+    lineIndex: number
+  ): LintError[] {
+    if (propIndent === expectedPropertyIndent) {
+      return [];
+    }
+
+    const severity = this.configManager.getRuleSeverity('when', 'indentation') as Severity;
+    if (severity === 'off') {
+      return [];
+    }
+
+    const propKey = propTrimmed.split(':')[0].trim();
+    return [{
+      message: `Indentação incorreta em propriedade '${propKey}' sob 'when:'. Esperado ${expectedPropertyIndent} espaços, encontrado ${propIndent}.`,
+      line: lineIndex,
+      column: 0,
+      endColumn: propIndent,
+      severity,
+      source: lintSource('when', 'indentation'),
+    }];
+  }
+
+  private validateWhenPropertyKeyValue(
+    propLine: string,
+    propTrimmed: string,
+    lineIndex: number
+  ): LintError[] {
+    const errors: LintError[] = [];
+    const colonIndex = propTrimmed.indexOf(':');
+    if (colonIndex <= 0) {
+      return errors;
+    }
+
+    const propKey = propTrimmed.substring(0, colonIndex).trim();
+    const keyValueErrors = [
+      ...this.validateWhenPropertyKey(propLine, propKey, lineIndex),
+      ...this.validateWhenPropertyValue(propLine, propTrimmed, propKey, colonIndex, lineIndex),
+    ];
+    errors.push(...keyValueErrors);
+
+    return errors;
+  }
+
+  private validateWhenPropertyKey(propLine: string, propKey: string, lineIndex: number): LintError[] {
+    if (VALID_WHEN_PROPERTIES.includes(propKey)) {
+      return [];
+    }
+
+    const severity = this.configManager.getRuleSeverity('when', 'invalidProperty') as Severity;
+    if (severity === 'off') {
+      return [];
+    }
+
+    const suggestion = findBestMatch(propKey, VALID_WHEN_PROPERTIES);
+    const col = propLine.indexOf(propKey);
+    const message = suggestion
+      ? `Propriedade inválida em 'when': "${propKey}". Você quis dizer "${suggestion}"?`
+      : `Propriedade inválida em 'when': "${propKey}".`;
+
+    return [{
+      message,
+      line: lineIndex,
+      column: col,
+      endColumn: col + propKey.length,
+      severity,
+      source: lintSource('when', 'invalidProperty'),
+    }];
+  }
+
+  private validateWhenPropertyValue(
+    propLine: string,
+    propTrimmed: string,
+    propKey: string,
+    colonIndex: number,
+    lineIndex: number
+  ): LintError[] {
+    const whenSchema = WHEN_PROPERTY_SCHEMA[propKey];
+    if (!whenSchema?.allowedValues) {
+      return [];
+    }
+
+    const propValue = propTrimmed.substring(colonIndex + 1).trim();
+    const normalizedValue = this.normalizeScalarValue(propValue);
+    if (!propValue || whenSchema.allowedValues.includes(normalizedValue)) {
+      return [];
+    }
+
+    const severity = this.configManager.getRuleSeverity('when', 'invalidValue') as Severity;
+    if (severity === 'off') {
+      return [];
+    }
+
+    const col = propLine.indexOf(propValue);
+    return [{
+      message: `Valor inválido "${propValue}" para "${propKey}" em 'when'. Valores aceitos: ${whenSchema.allowedValues.join(', ')}`,
+      line: lineIndex,
+      column: col,
+      endColumn: col + propValue.length,
+      severity,
+      source: lintSource('when', 'invalidValue'),
+    }];
   }
 }

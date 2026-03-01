@@ -1,5 +1,5 @@
-import { promises as fs } from 'fs';
-import * as path from 'path';
+import { promises as fs } from 'node:fs';
+import * as path from 'node:path';
 import { LintError, Severity } from '../models/LintError';
 import { ConfigManager } from '../config/ConfigManager';
 import { findCommandLine, findSeparatorLine } from '../utils/lineLocator';
@@ -8,18 +8,28 @@ import { isRecord } from '../utils/typeGuards';
 import { ValidationContext, Validator } from './Validator';
 
 export class FilePathValidator implements Validator {
-  constructor(private configManager: ConfigManager) {}
+  constructor(private readonly configManager: ConfigManager) {}
 
   async validate(context: ValidationContext): Promise<LintError[]> {
     const errors: LintError[] = [];
     const lines = context.lines;
-    const commands = context.commands;
     const basePath = path.dirname(context.filePath);
 
     const separatorLine = findSeparatorLine(lines);
-    let searchStartLine = separatorLine >= 0 ? separatorLine + 1 : 0;
+    await this.validateHeaderPaths(context.header, lines, separatorLine, basePath, errors);
+    await this.validateCommandPaths(context.commands, lines, separatorLine, basePath, errors);
 
-    const headerPathItems = this.extractHeaderFilePaths(context.header);
+    return errors;
+  }
+
+  private async validateHeaderPaths(
+    header: Record<string, unknown> | null,
+    lines: string[],
+    separatorLine: number,
+    basePath: string,
+    errors: LintError[]
+  ): Promise<void> {
+    const headerPathItems = this.extractHeaderFilePaths(header);
     for (const { filePath } of headerPathItems) {
       const lineIndex = this.findHeaderFileLine(lines, filePath, separatorLine);
       const error = await this.validatePath(filePath, basePath, lines, lineIndex);
@@ -27,48 +37,73 @@ export class FilePathValidator implements Validator {
         errors.push(error);
       }
     }
+  }
+
+  private async validateCommandPaths(
+    commands: unknown[],
+    lines: string[],
+    separatorLine: number,
+    basePath: string,
+    errors: LintError[]
+  ): Promise<void> {
+    let searchStartLine = separatorLine >= 0 ? separatorLine + 1 : 0;
 
     for (const command of commands) {
       if (!isRecord(command)) {
         continue;
       }
 
-      const commandObj = command;
-
-      for (const [key, value] of Object.entries(commandObj)) {
-        if (key !== 'runFlow' && key !== 'runScript') {
-          continue;
-        }
-
-
-        const commandLineIndex = findCommandLine(lines, key, searchStartLine);
-
-        let filePath: string | null = null;
-
-        if (typeof value === 'string') {
-          filePath = value;
-        } else if (isRecord(value)) {
-          const valueObj = value;
-          if (typeof valueObj['file'] === 'string') {
-            filePath = valueObj['file'];
-          }
-        }
-
-        searchStartLine = commandLineIndex + 1;
-
-        if (!filePath) {
-          continue;
-        }
-
-        const fileLineIndex = this.findFileLineInBlock(lines, filePath, commandLineIndex);
-        const error = await this.validatePath(filePath, basePath, lines, fileLineIndex);
-        if (error) {
-          errors.push(error);
-        }
+      for (const [key, value] of Object.entries(command)) {
+        searchStartLine = await this.processCommandPathEntry(
+          key,
+          value,
+          searchStartLine,
+          lines,
+          basePath,
+          errors
+        );
       }
     }
+  }
 
-    return errors;
+  private async processCommandPathEntry(
+    key: string,
+    value: unknown,
+    searchStartLine: number,
+    lines: string[],
+    basePath: string,
+    errors: LintError[]
+  ): Promise<number> {
+    if (key !== 'runFlow' && key !== 'runScript') {
+      return searchStartLine;
+    }
+
+    const commandLineIndex = findCommandLine(lines, key, searchStartLine);
+    const nextSearchStartLine = commandLineIndex + 1;
+    const commandFilePath = this.extractCommandFilePath(value);
+    if (!commandFilePath) {
+      return nextSearchStartLine;
+    }
+
+    const fileLineIndex = this.findFileLineInBlock(lines, commandFilePath, commandLineIndex);
+    const error = await this.validatePath(commandFilePath, basePath, lines, fileLineIndex);
+    if (error) {
+      errors.push(error);
+    }
+
+    return nextSearchStartLine;
+  }
+
+  private extractCommandFilePath(value: unknown): string | null {
+    if (typeof value === 'string') {
+      return value;
+    }
+
+    if (!isRecord(value)) {
+      return null;
+    }
+
+    return typeof value['file'] === 'string' ? value['file'] : null;
   }
 
   private async validatePath(
@@ -99,7 +134,7 @@ export class FilePathValidator implements Validator {
     return {
       message: `Arquivo não encontrado: "${filePath}" (resolvido: ${resolvedPath})`,
       line: lineIndex,
-      column: col >= 0 ? col : 0,
+      column: Math.max(0, col),
       endColumn: col >= 0 ? col + filePath.length : filePath.length,
       severity,
       source: lintSource('filePath', 'fileNotFound'),
@@ -121,27 +156,36 @@ export class FilePathValidator implements Validator {
       }
 
       for (const item of hookValue) {
-        if (typeof item === 'string') {
-          result.push({ filePath: item });
-          continue;
-        }
-
-        if (!isRecord(item)) {
-          continue;
-        }
-
-        const runFlow = item['runFlow'];
-        if (typeof runFlow === 'string') {
-          result.push({ filePath: runFlow });
-        }
-
-        const runScript = item['runScript'];
-        if (typeof runScript === 'string') {
-          result.push({ filePath: runScript });
-        } else if (isRecord(runScript) && typeof runScript['file'] === 'string') {
-          result.push({ filePath: runScript['file'] });
+        const hookPaths = this.extractHookItemPaths(item);
+        for (const filePath of hookPaths) {
+          result.push({ filePath });
         }
       }
+    }
+
+    return result;
+  }
+
+  private extractHookItemPaths(item: unknown): string[] {
+    if (typeof item === 'string') {
+      return [item];
+    }
+
+    if (!isRecord(item)) {
+      return [];
+    }
+
+    const result: string[] = [];
+    const runFlow = item['runFlow'];
+    if (typeof runFlow === 'string') {
+      result.push(runFlow);
+    }
+
+    const runScript = item['runScript'];
+    if (typeof runScript === 'string') {
+      result.push(runScript);
+    } else if (isRecord(runScript) && typeof runScript['file'] === 'string') {
+      result.push(runScript['file']);
     }
 
     return result;
@@ -159,13 +203,20 @@ export class FilePathValidator implements Validator {
   }
 
   private findFileLineInBlock(lines: string[], filePath: string, commandLine: number): number {
-    if (lines[commandLine]?.includes(filePath)) {
-      return commandLine;
+    if (lines.length === 0) {
+      return 0;
     }
 
-    const commandIndent = lines[commandLine].length - lines[commandLine].trimStart().length;
+    const safeCommandLine = Math.max(0, Math.min(commandLine, lines.length - 1));
 
-    for (let i = commandLine + 1; i < lines.length; i++) {
+    if (lines[safeCommandLine]?.includes(filePath)) {
+      return safeCommandLine;
+    }
+
+    const commandLineText = lines[safeCommandLine] ?? '';
+    const commandIndent = commandLineText.length - commandLineText.trimStart().length;
+
+    for (let i = safeCommandLine + 1; i < lines.length; i++) {
       const trimmed = lines[i].trimStart();
       const indent = lines[i].length - trimmed.length;
 
@@ -178,6 +229,6 @@ export class FilePathValidator implements Validator {
       }
     }
 
-    return commandLine;
+    return safeCommandLine;
   }
 }

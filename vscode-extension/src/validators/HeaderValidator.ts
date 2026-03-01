@@ -7,16 +7,55 @@ import { findHeaderKeyLine } from '../utils/lineLocator';
 import { ValidationContext, Validator } from './Validator';
 
 export class HeaderValidator implements Validator {
-  constructor(private configManager: ConfigManager) {}
+  constructor(private readonly configManager: ConfigManager) {}
 
   validate(context: ValidationContext): LintError[] {
-    const errors: LintError[] = [];
-    const lines = context.lines;
+    const { lines } = context;
     const headerObj = context.header;
 
     if (!headerObj) {
-      return errors;
+      return [];
     }
+
+    return [
+      ...this.validateRequiredAppId(headerObj),
+      ...this.validateHeaderProperties(headerObj, lines),
+      ...this.validateHeaderValues(headerObj, lines),
+      ...this.validateRequiredTags(headerObj, lines),
+    ];
+  }
+
+  private validateRequiredAppId(headerObj: Record<string, unknown>): LintError[] {
+    const hasExactAppId = Object.hasOwn(headerObj, 'appId');
+    if (hasExactAppId) {
+      return [];
+    }
+
+    const hasCaseVariant = Object.keys(headerObj).some((key) => key.toLowerCase() === 'appid');
+    if (hasCaseVariant) {
+      return [];
+    }
+
+    const severity = this.configManager.getRuleSeverity('header', 'appId') as Severity;
+    if (severity === 'off') {
+      return [];
+    }
+
+    return [{
+      message: 'Propriedade obrigatória no header não encontrada: "appId".',
+      line: 0,
+      column: 0,
+      endColumn: 5,
+      severity,
+      source: lintSource('header', 'appId'),
+    }];
+  }
+
+  private validateHeaderProperties(
+    headerObj: Record<string, unknown>,
+    lines: string[]
+  ): LintError[] {
+    const errors: LintError[] = [];
 
     for (const key of Object.keys(headerObj)) {
       const lineIndex = findHeaderKeyLine(lines, key);
@@ -61,6 +100,15 @@ export class HeaderValidator implements Validator {
       }
     }
 
+    return errors;
+  }
+
+  private validateHeaderValues(
+    headerObj: Record<string, unknown>,
+    lines: string[]
+  ): LintError[] {
+    const errors: LintError[] = [];
+
     // Header property value validation
     for (const [key, value] of Object.entries(headerObj)) {
       const schema = HEADER_PROPERTY_SCHEMA[key];
@@ -87,6 +135,15 @@ export class HeaderValidator implements Validator {
         }
       }
     }
+
+    return errors;
+  }
+
+  private validateRequiredTags(
+    headerObj: Record<string, unknown>,
+    lines: string[]
+  ): LintError[] {
+    const errors: LintError[] = [];
 
     const config = this.configManager.getConfig();
     if (config.tags.requiredOneOf.length > 0) {

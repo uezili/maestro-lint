@@ -14,8 +14,8 @@ import { ConfigManager, LinterConfig, LinterSettings } from '../config/ConfigMan
 
 class ConfigManagerStub {
   constructor(
-    private config: LinterConfig,
-    private settings: LinterSettings
+    private readonly config: LinterConfig,
+    private readonly settings: LinterSettings
   ) {}
 
   getConfig(): LinterConfig {
@@ -75,6 +75,19 @@ test('HeaderValidator reports case-sensitivity issues', () => {
   const result = validator.validate(context);
   assert.equal(result.length, 1);
   assert.match(result[0].message, /capitalização/i);
+});
+
+test('HeaderValidator reports missing required appId', () => {
+  const validator = new HeaderValidator(createConfigStub());
+  const text = 'tags:\n  - smoke\n---\n- tapOn: Login';
+  const context = createContext(text);
+  context.header = { tags: ['smoke'] };
+
+  const result = validator.validate(context);
+  const appIdErrors = result.filter((error) => /header\.appId/.test(error.source));
+
+  assert.equal(appIdErrors.length, 1);
+  assert.match(appIdErrors[0].message, /appId/);
 });
 
 test('CommandValidator reports invalid command with suggestion', () => {
@@ -364,8 +377,11 @@ test('HeaderValidator flags invalid value for androidWebViewHierarchy', () => {
   const result = validator.validate(context);
   const valueError = result.find(e => e.source?.includes('invalidValue'));
   assert.ok(valueError, 'should flag invalid value');
-  assert.match(valueError!.message, /chromium/);
-  assert.match(valueError!.message, /devtools/);
+  if (!valueError) {
+    return;
+  }
+  assert.match(valueError.message, /chromium/);
+  assert.match(valueError.message, /devtools/);
 });
 
 test('HeaderValidator accepts valid value for androidWebViewHierarchy', () => {
@@ -400,8 +416,11 @@ test('CommandValidator flags invalid value for setOrientation', () => {
   const result = validator.validate(context);
   const valueError = result.find(e => e.source?.includes('invalidValue'));
   assert.ok(valueError, 'should flag invalid value');
-  assert.match(valueError!.message, /DIAGONAL/);
-  assert.match(valueError!.message, /PORTRAIT/);
+  if (!valueError) {
+    return;
+  }
+  assert.match(valueError.message, /DIAGONAL/);
+  assert.match(valueError.message, /PORTRAIT/);
 });
 
 test('CommandValidator accepts valid value for setOrientation', () => {

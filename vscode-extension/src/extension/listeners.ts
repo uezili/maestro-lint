@@ -4,10 +4,6 @@ import { OutputManager } from '../utils/OutputManager';
 import { ConfigManager } from '../config/ConfigManager';
 import { DebouncedFn, createDebouncedFn } from '../utils/debounce';
 
-/**
- * Register all validation event listeners
- * Consolidates listener registration logic
- */
 export function registerValidationListeners(
   context: vscode.ExtensionContext,
   lintProvider: MaestroLintProvider,
@@ -15,7 +11,6 @@ export function registerValidationListeners(
 ): void {
   const config = vscode.workspace.getConfiguration('maestroLint');
 
-  // Helper function to safely validate
   async function validateDocument(document: vscode.TextDocument) {
     try {
       await lintProvider.validateDocument(document);
@@ -25,36 +20,31 @@ export function registerValidationListeners(
     }
   }
 
-  // Listen to text editor changes
-  context.subscriptions.push(
-    vscode.window.onDidChangeActiveTextEditor((editor) => {
-      if (editor) {
-        void validateDocument(editor.document);
-      }
-    })
-  );
+  const activeEditorListener = vscode.window.onDidChangeActiveTextEditor((editor) => {
+    if (editor) {
+      void validateDocument(editor.document);
+    }
+  });
 
-  // Listen to document open
-  context.subscriptions.push(
-    vscode.workspace.onDidOpenTextDocument((document) => {
+  const openDocumentListener = vscode.workspace.onDidOpenTextDocument((document) => {
+    void validateDocument(document);
+  });
+
+  const saveDocumentListener = vscode.workspace.onDidSaveTextDocument((document) => {
+    if (config.get<boolean>('validateOnSave', true)) {
       void validateDocument(document);
-    })
-  );
+    }
+  });
 
-  // Listen to document save
-  context.subscriptions.push(
-    vscode.workspace.onDidSaveTextDocument((document) => {
-      if (config.get<boolean>('validateOnSave', true)) {
-        void validateDocument(document);
-      }
-    })
-  );
+  const closeDocumentListener = vscode.workspace.onDidCloseTextDocument((document) => {
+    lintProvider.clearDocumentDiagnostics(document.uri);
+  });
 
-  // Listen to document close
   context.subscriptions.push(
-    vscode.workspace.onDidCloseTextDocument((document) => {
-      lintProvider.clearDocumentDiagnostics(document.uri);
-    })
+    activeEditorListener,
+    openDocumentListener,
+    saveDocumentListener,
+    closeDocumentListener
   );
 }
 

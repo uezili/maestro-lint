@@ -105,7 +105,8 @@ export const COMMAND_SCHEMA: Record<string, CommandDef> = {
   },
   pressKey: {
     properties: [],
-    optional: [
+    optional: [],
+    allowedValues: [
       'home', 'back', 'volume up', 'volume down', 'enter',
       'tab', 'lock', 'power', 'backspace',
     ],

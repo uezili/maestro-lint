@@ -7,13 +7,19 @@ import { lintSource } from '../utils/lintSource';
 import { isRecord } from '../utils/typeGuards';
 import { ValidationContext, Validator } from './Validator';
 
+interface MapValidationContext {
+  lines: string[];
+  commandLineIndex: number;
+  commandIndent: number;
+  severity: Severity;
+}
+
 export class NestedObjectValidator implements Validator {
-  constructor(private configManager: ConfigManager) {}
+  constructor(private readonly configManager: ConfigManager) {}
 
   validate(context: ValidationContext): LintError[] {
     const errors: LintError[] = [];
-    const lines = context.lines;
-    const commands = context.commands;
+    const { lines, commands } = context;
 
     const separatorLine = findSeparatorLine(lines);
     let commandStartLine = separatorLine >= 0 ? separatorLine + 1 : 0;
@@ -23,32 +29,42 @@ export class NestedObjectValidator implements Validator {
         continue;
       }
 
-      const commandObj = command;
-
-      for (const nestedCmd of NESTED_OBJECT_COMMANDS) {
-        if (nestedCmd in commandObj) {
-          const value = commandObj[nestedCmd];
-          const commandLineIndex = findCommandLine(lines, nestedCmd, commandStartLine);
-          if (isRecord(value)) {
-            const def = getCommandDef(nestedCmd);
-            if (def?.nestedObject) {
-              errors.push(
-                ...this.validateNestedObject(
-                  nestedCmd,
-                  value,
-                  def.nestedObject,
-                  lines,
-                  commandLineIndex
-                )
-              );
-            }
-          }
-          commandStartLine = commandLineIndex + 1;
-        }
-      }
+      commandStartLine = this.validateNestedCommands(command, lines, commandStartLine, errors);
     }
 
     return errors;
+  }
+
+  private validateNestedCommands(
+    commandObj: Record<string, unknown>,
+    lines: string[],
+    commandStartLine: number,
+    errors: LintError[]
+  ): number {
+    let currentStartLine = commandStartLine;
+
+    for (const nestedCmd of NESTED_OBJECT_COMMANDS) {
+      if (!(nestedCmd in commandObj)) {
+        continue;
+      }
+
+      const value = commandObj[nestedCmd];
+      const commandLineIndex = findCommandLine(lines, nestedCmd, currentStartLine);
+      currentStartLine = commandLineIndex + 1;
+
+      if (!isRecord(value)) {
+        continue;
+      }
+
+      const nestedDef = getCommandDef(nestedCmd)?.nestedObject;
+      if (!nestedDef) {
+        continue;
+      }
+
+      errors.push(...this.validateNestedObject(nestedCmd, value, nestedDef, lines, commandLineIndex));
+    }
+
+    return currentStartLine;
   }
 
   private validateNestedObject(
@@ -67,41 +83,68 @@ export class NestedObjectValidator implements Validator {
     const commandIndent = lines[commandLineIndex].length - lines[commandLineIndex].trimStart().length;
 
     for (const [nestedKey, nestedDef] of Object.entries(nestedDefs)) {
+      if (!nestedDef.isMap) {
+        continue;
+      }
+
       const nestedValue = value[nestedKey];
       if (!nestedValue || typeof nestedValue !== 'object') {
         continue;
       }
 
-      if (nestedDef.isMap) {
-        const map = nestedValue as Record<string, unknown>;
-        for (const [key, val] of Object.entries(map)) {
-          // Localiza a chave dentro do bloco do comando (não no arquivo inteiro)
-          const lineIndex = this.findKeyLineInBlock(lines, key, commandLineIndex, commandIndent);
-
-          // Validate key
-          if (!nestedDef.validKeys.includes(key)) {
-            errors.push({
-              message: `${commandName} em "${nestedKey}": chave inválida "${key}". Válidas: ${nestedDef.validKeys.join(', ')}`,
-              line: lineIndex,
-              column: lines[lineIndex]?.indexOf(key) ?? 0,
-              endColumn: (lines[lineIndex]?.indexOf(key) ?? 0) + key.length,
-              severity,
-              source: lintSource('command', commandName),
-            });
+      const map = nestedValue as Record<string, unknown>;
+      errors.push(
+        ...this.validateMapEntries(
+          commandName,
+          nestedKey,
+          nestedDef,
+          map,
+          {
+            lines,
+            commandLineIndex,
+            commandIndent,
+            severity,
           }
+        )
+      );
+    }
 
-          // Validate value
-          if (typeof val === 'string' && !nestedDef.validValues.includes(val)) {
-            errors.push({
-              message: `${commandName} em "${nestedKey}.${key}": valor inválido "${val}" (válidos: ${nestedDef.validValues.join(', ')})`,
-              line: lineIndex,
-              column: lines[lineIndex]?.indexOf(val) ?? 0,
-              endColumn: (lines[lineIndex]?.indexOf(val) ?? 0) + val.length,
-              severity,
-              source: lintSource('command', commandName),
-            });
-          }
-        }
+    return errors;
+  }
+
+  private validateMapEntries(
+    commandName: string,
+    nestedKey: string,
+    nestedDef: NestedObjectDef,
+    map: Record<string, unknown>,
+    context: MapValidationContext
+  ): LintError[] {
+    const errors: LintError[] = [];
+    const { lines, commandLineIndex, commandIndent, severity } = context;
+
+    for (const [key, val] of Object.entries(map)) {
+      const lineIndex = this.findKeyLineInBlock(lines, key, commandLineIndex, commandIndent);
+
+      if (!nestedDef.validKeys.includes(key)) {
+        errors.push({
+          message: `${commandName} em "${nestedKey}": chave inválida "${key}". Válidas: ${nestedDef.validKeys.join(', ')}`,
+          line: lineIndex,
+          column: lines[lineIndex]?.indexOf(key) ?? 0,
+          endColumn: (lines[lineIndex]?.indexOf(key) ?? 0) + key.length,
+          severity,
+          source: lintSource('command', commandName),
+        });
+      }
+
+      if (typeof val === 'string' && !nestedDef.validValues.includes(val)) {
+        errors.push({
+          message: `${commandName} em "${nestedKey}.${key}": valor inválido "${val}" (válidos: ${nestedDef.validValues.join(', ')})`,
+          line: lineIndex,
+          column: lines[lineIndex]?.indexOf(val) ?? 0,
+          endColumn: (lines[lineIndex]?.indexOf(val) ?? 0) + val.length,
+          severity,
+          source: lintSource('command', commandName),
+        });
       }
     }
 

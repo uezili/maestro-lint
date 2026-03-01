@@ -17,34 +17,20 @@ import { RangeCalculator } from '../utils/rangeCalculator';
 
 export class MaestroLintProvider {
   private readonly validators: Validator[];
-  private  headerValidator: HeaderValidator;
-  private commandValidator: CommandValidator;
-  private whenValidator: WhenValidator;
-  private filePathValidator: FilePathValidator;
-  private arrayCommandValidator: ArrayCommandValidator;
-  private nestedObjectValidator: NestedObjectValidator;
-  private structuralValidator: StructuralValidator;
 
   constructor(
-    private diagnosticCollection: vscode.DiagnosticCollection,
+    private readonly diagnosticCollection: vscode.DiagnosticCollection,
     configManager: ConfigManager,
-    private outputManager: OutputManager
+    private readonly outputManager: OutputManager
   ) {
-    this.headerValidator = new HeaderValidator(configManager);
-    this.commandValidator = new CommandValidator(configManager);
-    this.whenValidator = new WhenValidator(configManager);
-    this.filePathValidator = new FilePathValidator(configManager);
-    this.arrayCommandValidator = new ArrayCommandValidator(configManager);
-    this.nestedObjectValidator = new NestedObjectValidator(configManager);
-    this.structuralValidator = new StructuralValidator(configManager);
     this.validators = [
-      this.structuralValidator,
-      this.headerValidator,
-      this.commandValidator,
-      this.filePathValidator,
-      this.arrayCommandValidator,
-      this.nestedObjectValidator,
-      this.whenValidator,
+      new StructuralValidator(configManager),
+      new HeaderValidator(configManager),
+      new CommandValidator(configManager),
+      new FilePathValidator(configManager),
+      new ArrayCommandValidator(configManager),
+      new NestedObjectValidator(configManager),
+      new WhenValidator(configManager),
     ];
   }
 
@@ -102,36 +88,44 @@ export class MaestroLintProvider {
   }
 
   async validateWorkspace(): Promise<void> {
-    const config = vscode.workspace.getConfiguration('maestroLint');
-    const pattern = config.get<string>('filePattern', '**/*.yaml');
+    try {
+      const config = vscode.workspace.getConfiguration('maestroLint');
+      const pattern = config.get<string>('filePattern', '**/*.yaml');
 
-    const files = await vscode.workspace.findFiles(pattern, '**/node_modules/**');
-    let total = 0;
-    let withErrors = 0;
+      const files = await vscode.workspace.findFiles(pattern, '**/node_modules/**');
+      let total = 0;
+      let withErrors = 0;
 
-    for (const file of files) {
-      const document = await vscode.workspace.openTextDocument(file);
-      const text = document.getText();
+      for (const file of files) {
+        const document = await vscode.workspace.openTextDocument(file);
+        const text = document.getText();
 
-      if (!this.isMaestroFile(text)) {
-        continue;
+        if (!this.isMaestroFile(text)) {
+          continue;
+        }
+
+        total++;
+        const errors = await this.lint(text, document.fileName);
+
+        if (errors.length > 0) {
+          withErrors++;
+        }
+
+        const diagnostics = this.errorsToDiagnostics(errors, document);
+        this.diagnosticCollection.set(document.uri, diagnostics);
       }
 
-      total++;
-      const errors = await this.lint(text, document.fileName);
-
-      if (errors.length > 0) {
-        withErrors++;
-      }
-
-      const diagnostics = this.errorsToDiagnostics(errors, document);
-      this.diagnosticCollection.set(document.uri, diagnostics);
+      this.outputManager.log(`📊 Workspace validado: ${total} arquivo(s), ${withErrors} com problema(s)`);
+      vscode.window.showInformationMessage(
+        `Maestro Lint: ${total} arquivo(s) validado(s), ${withErrors} com problema(s).`
+      );
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : String(error);
+      this.outputManager.warn(`Erro ao validar workspace: ${msg}`);
+      vscode.window.showErrorMessage(
+        'Maestro Lint: erro ao validar workspace. Verifique a saída do Maestro Lint para mais detalhes.'
+      );
     }
-
-    this.outputManager.log(`📊 Workspace validado: ${total} arquivo(s), ${withErrors} com problema(s)`);
-    vscode.window.showInformationMessage(
-      `Maestro Lint: ${total} arquivo(s) validado(s), ${withErrors} com problema(s).`
-    );
   }
 
   revalidateAll(): void {
@@ -209,11 +203,14 @@ export class MaestroLintProvider {
   }
 
   private isMaestroFile(text: string): boolean {
-    const hasKnownCommand = VALID_COMMANDS.some((command) => text.includes(command));
+    if (text.includes('appId:')) {
+      return true;
+    }
 
-    return (
-      text.includes('appId:') ||
-      hasKnownCommand
-    );
+    return VALID_COMMANDS.some((command) => {
+      const escapedCommand = command.replaceAll(/[.*+?^${}()|[\]\\]/g, String.raw`\$&`);
+      const pattern = new RegExp(String.raw`^- ${escapedCommand}(\s*:|$)`, 'm');
+      return pattern.test(text);
+    });
   }
 }
