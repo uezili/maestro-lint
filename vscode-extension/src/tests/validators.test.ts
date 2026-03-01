@@ -35,7 +35,7 @@ function createContext(text: string): ValidationContext {
   return {
     text,
     lines: text.split('\n'),
-    filePath: '/tmp/test.yaml',
+    filePath: path.join(process.cwd(), 'workspace', 'tests', 'test-context.yaml'),
     header: null,
     commands: [],
   };
