@@ -57,7 +57,7 @@ function createConfigStub(): ConfigManager {
     rules: {
       header: { invalidProperty: 'error', appId: 'error', tags: 'error', env: 'off', name: 'off', onFlowStart: 'off', onFlowComplete: 'off' },
       command: { invalidCommand: 'error', invalidProperty: 'error', missingValue: 'error', emptyValue: 'warning' },
-      when: { invalidProperty: 'error', invalidPlatform: 'error', indentation: 'warning' },
+      when: { invalidProperty: 'error', invalidPlatform: 'error', invalidValue: 'error', indentation: 'warning' },
       filePath: { fileNotFound: 'error', invalidPath: 'error' },
     },
     settings: { reportUnusedDisableDirectives: 'warning', maxWarnings: -1, indentationSpaces: 2 },
@@ -133,14 +133,70 @@ test('StructuralValidator reports file property misplaced under env (text-based,
   assert.equal(indentationErrors.length, 1);
 });
 
-test('WhenValidator reports invalid platform', () => {
+test('StructuralValidator reports over-indented env property in runFlow', () => {
+  const { StructuralValidator } = require('../validators/StructuralValidator');
+  const validator = new StructuralValidator(createConfigStub());
+  const text = [
+    '- runFlow:',
+    '    when:',
+    '      platform: android',
+    '    env:',
+    "        PRODUCT: 'Test'",
+    "    file: 'test.yaml'",
+  ].join('\n');
+  const context = createContext(text);
+  context.commands = [];
+
+  const result = validator.validate(context);
+  const productIndentationErrors = result.filter((error: { source: string; message: string }) =>
+    error.source === 'maestro-lint(command.indentation)' && /propriedade "PRODUCT" em "env" está com indentação incorreta/i.test(error.message)
+  );
+
+  assert.equal(productIndentationErrors.length, 1);
+});
+
+test('StructuralValidator reports over-indented command item inside runFlow commands', () => {
+  const { StructuralValidator } = require('../validators/StructuralValidator');
+  const validator = new StructuralValidator(createConfigStub());
+  const text = [
+    '- runFlow:',
+    '    when:',
+    '      platform: android',
+    '    commands:',
+    "        - tapOn: '.*Número do celular.*'",
+  ].join('\n');
+  const context = createContext(text);
+  context.commands = [];
+
+  const result = validator.validate(context);
+  const commandIndentationErrors = result.filter((error: { source: string; message: string }) =>
+    error.source === 'maestro-lint(command.indentation)' && /propriedade "tapOn" em "commands" está com indentação incorreta/i.test(error.message)
+  );
+
+  assert.equal(commandIndentationErrors.length, 1);
+});
+
+test('WhenValidator reports invalid platform via schema', () => {
   const validator = new WhenValidator(createConfigStub());
   const text = 'appId: com.app\n---\n- tapOn:\n    text: Login\n    when:\n      platform: windows';
   const context = createContext(text);
 
   const result = validator.validate(context);
   assert.equal(result.length, 1);
-  assert.match(result[0].message, /Plataforma inválida/i);
+  assert.match(result[0].message, /windows/);
+  assert.match(result[0].message, /android, ios, web/);
+  assert.match(result[0].source, /when\.invalidValue/);
+});
+
+test('WhenValidator accepts quoted platform via schema', () => {
+  const validator = new WhenValidator(createConfigStub());
+  const text = 'appId: com.app\n---\n- runFlow:\n    when:\n      platform: "android"\n    commands:\n      - tapOn: Login';
+  const context = createContext(text);
+
+  const result = validator.validate(context);
+  const invalidValueErrors = result.filter((error) => /when\.invalidValue/.test(error.source));
+
+  assert.equal(invalidValueErrors.length, 0);
 });
 
 test('WhenValidator reports invalid nested env and file inside when', () => {
@@ -291,4 +347,75 @@ test('ArrayCommandValidator accepts valid relative media path', () => {
 
   const result = validator.validate(context);
   assert.equal(result.length, 0);
+});
+
+test('HeaderValidator flags invalid value for androidWebViewHierarchy', () => {
+  const validator = new HeaderValidator(createConfigStub());
+  const text = [
+    'appId: com.app',
+    'androidWebViewHierarchy: chromium',
+    '---',
+    '- launchApp',
+  ].join('\n');
+
+  const context = createContext(text);
+  context.header = { appId: 'com.app', androidWebViewHierarchy: 'chromium' };
+
+  const result = validator.validate(context);
+  const valueError = result.find(e => e.source?.includes('invalidValue'));
+  assert.ok(valueError, 'should flag invalid value');
+  assert.match(valueError!.message, /chromium/);
+  assert.match(valueError!.message, /devtools/);
+});
+
+test('HeaderValidator accepts valid value for androidWebViewHierarchy', () => {
+  const validator = new HeaderValidator(createConfigStub());
+  const text = [
+    'appId: com.app',
+    'androidWebViewHierarchy: devtools',
+    '---',
+    '- launchApp',
+  ].join('\n');
+
+  const context = createContext(text);
+  context.header = { appId: 'com.app', androidWebViewHierarchy: 'devtools' };
+
+  const result = validator.validate(context);
+  const valueError = result.find(e => e.source?.includes('invalidValue'));
+  assert.equal(valueError, undefined, 'should not flag valid value');
+});
+
+// ─── CommandValidator: Value Validation ──────────────────────────────
+test('CommandValidator flags invalid value for setOrientation', () => {
+  const validator = new CommandValidator(createConfigStub());
+  const text = [
+    'appId: com.app',
+    '---',
+    '- setOrientation: DIAGONAL',
+  ].join('\n');
+
+  const context = createContext(text);
+  context.commands = [{ setOrientation: 'DIAGONAL' }];
+
+  const result = validator.validate(context);
+  const valueError = result.find(e => e.source?.includes('invalidValue'));
+  assert.ok(valueError, 'should flag invalid value');
+  assert.match(valueError!.message, /DIAGONAL/);
+  assert.match(valueError!.message, /PORTRAIT/);
+});
+
+test('CommandValidator accepts valid value for setOrientation', () => {
+  const validator = new CommandValidator(createConfigStub());
+  const text = [
+    'appId: com.app',
+    '---',
+    '- setOrientation: LANDSCAPE_LEFT',
+  ].join('\n');
+
+  const context = createContext(text);
+  context.commands = [{ setOrientation: 'LANDSCAPE_LEFT' }];
+
+  const result = validator.validate(context);
+  const valueError = result.find(e => e.source?.includes('invalidValue'));
+  assert.equal(valueError, undefined, 'should not flag valid value');
 });
