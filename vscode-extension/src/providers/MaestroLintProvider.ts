@@ -17,7 +17,7 @@ import { RangeCalculator } from '../utils/rangeCalculator';
 
 export class MaestroLintProvider {
   private readonly validators: Validator[];
-  private headerValidator: HeaderValidator;
+  private  headerValidator: HeaderValidator;
   private commandValidator: CommandValidator;
   private whenValidator: WhenValidator;
   private filePathValidator: FilePathValidator;
@@ -27,7 +27,7 @@ export class MaestroLintProvider {
 
   constructor(
     private diagnosticCollection: vscode.DiagnosticCollection,
-    private configManager: ConfigManager,
+    configManager: ConfigManager,
     private outputManager: OutputManager
   ) {
     this.headerValidator = new HeaderValidator(configManager);

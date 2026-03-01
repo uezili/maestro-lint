@@ -1,5 +1,4 @@
 import * as vscode from 'vscode';
-import { LintError } from '../models/LintError';
 
 /**
  * Utility class for calculating and normalizing text ranges
