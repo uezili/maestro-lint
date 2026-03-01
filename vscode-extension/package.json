@@ -1,0 +1,112 @@
+{
+  "name": "maestro-lint-vscode",
+  "displayName": "Maestro Lint",
+  "description": "Linter em tempo real para arquivos de teste Maestro (YAML). Detecta erros de sintaxe, case-sensitivity, propriedades inválidas e mais.",
+  "version": "0.1.0",
+  "publisher": "uezili",
+  "license": "MIT",
+  "icon": "assets/icon.png",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/uezili/maestro-lint"
+  },
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Linters",
+    "Testing",
+    "Other"
+  ],
+  "keywords": [
+    "maestro",
+    "mobile",
+    "testing",
+    "yaml",
+    "linter",
+    "diagnostics"
+  ],
+  "activationEvents": [
+    "onLanguage:yaml",
+    "workspaceContains:**/*-test.yaml",
+    "workspaceContains:**/*.yaml"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "configuration": {
+      "title": "Maestro Lint",
+      "properties": {
+        "maestroLint.enable": {
+          "type": "boolean",
+          "default": true,
+          "description": "Habilita/desabilita o Maestro Lint"
+        },
+        "maestroLint.configPath": {
+          "type": "string",
+          "default": "linter.config.json",
+          "description": "Caminho relativo para o arquivo de configuração do linter"
+        },
+        "maestroLint.validateOnSave": {
+          "type": "boolean",
+          "default": true,
+          "description": "Validar arquivo ao salvar"
+        },
+        "maestroLint.validateOnType": {
+          "type": "boolean",
+          "default": true,
+          "description": "Validar arquivo em tempo real enquanto digita"
+        },
+        "maestroLint.debounceDelay": {
+          "type": "number",
+          "default": 500,
+          "description": "Delay em ms para validação em tempo real (debounce)"
+        },
+        "maestroLint.filePattern": {
+          "type": "string",
+          "default": "**/*.yaml",
+          "description": "Glob pattern para arquivos a serem validados"
+        }
+      }
+    },
+    "commands": [
+      {
+        "command": "maestroLint.validateFile",
+        "title": "Maestro Lint: Validar Arquivo Atual"
+      },
+      {
+        "command": "maestroLint.validateWorkspace",
+        "title": "Maestro Lint: Validar Todo o Workspace"
+      },
+      {
+        "command": "maestroLint.restart",
+        "title": "Maestro Lint: Reiniciar Linter"
+      },
+      {
+        "command": "maestroLint.showOutput",
+        "title": "Maestro Lint: Mostrar Output"
+      }
+    ]
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "test": "npm run compile && node --test out/tests/validators.test.js",
+    "lint": "eslint src --ext ts",
+    "package": "vsce package",
+    "publish": "vsce publish"
+  },
+  "devDependencies": {
+    "@types/js-yaml": "^4.0.9",
+    "@types/node": "^20.11.0",
+    "@types/vscode": "^1.85.0",
+    "@typescript-eslint/eslint-plugin": "^8.56.1",
+    "@typescript-eslint/parser": "^8.56.1",
+    "@vscode/vsce": "^2.22.0",
+    "eslint": "^8.56.0",
+    "typescript": "^5.3.3"
+  },
+  "dependencies": {
+    "js-yaml": "^4.1.0"
+  }
+}

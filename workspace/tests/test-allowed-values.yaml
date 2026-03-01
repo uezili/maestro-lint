@@ -1,0 +1,110 @@
+# ============================================================
+# Teste de validação de valores permitidos (allowedValues)
+# Cobre: Header, Comandos e When
+# ============================================================
+
+appId: com.test.app
+tags:
+  - smoke
+  - wip
+name: '[TEST-ALLOWED-VALUES] - Validação de valores restritos'
+
+# ── Header: androidWebViewHierarchy ──────────────────────────
+# ✅ CORRETO: único valor aceito é "devtools"
+# androidWebViewHierarchy: devtools
+
+# ❌ ERRO ESPERADO: valor inválido no header
+androidWebViewHierarchy: chromium
+
+---
+
+# ══════════════════════════════════════════════════════════════
+# COMANDOS COM allowedValues
+# ══════════════════════════════════════════════════════════════
+
+# ── setOrientation ───────────────────────────────────────────
+# ✅ CORRETO: valores aceitos
+- setOrientation: PORTRAIT
+- setOrientation: LANDSCAPE_LEFT
+- setOrientation: LANDSCAPE_RIGHT
+- setOrientation: UPSIDE_DOWN
+
+# ❌ ERRO ESPERADO: valores inválidos
+- setOrientation: DIAGONAL
+- setOrientation: landscape_left
+- setOrientation: horizontal
+- setOrientation: portrait
+
+# ══════════════════════════════════════════════════════════════
+# WHEN: validação de platform via WHEN_PROPERTY_SCHEMA
+# ══════════════════════════════════════════════════════════════
+
+# ✅ CORRETO: plataformas válidas
+- tapOn:
+    text: 'Botão Android'
+    when:
+      platform: android
+- tapOn:
+    text: 'Botão iOS'
+    when:
+      platform: ios
+- tapOn:
+    text: 'Botão Web'
+    when:
+      platform: web
+
+# ❌ ERRO ESPERADO: plataformas inválidas
+- tapOn:
+    text: 'Botão Windows'
+    when:
+      platform: windows
+- tapOn:
+    text: 'Botão Desktop'
+    when:
+      platform: desktop
+- assertVisible:
+    text: 'Elemento Mobile'
+    when:
+      platform: mobile
+
+# ══════════════════════════════════════════════════════════════
+# OUTROS VALIDADORES (regressão)
+# ══════════════════════════════════════════════════════════════
+
+# ── Comando inválido (typo) ──────────────────────────────────
+# ❌ ERRO ESPERADO: comando não existe
+- setOrientaton: PORTRAIT
+
+# ── Propriedade inválida em comando ──────────────────────────
+# ❌ ERRO ESPERADO: "txt" não é prop válida de tapOn
+- tapOn:
+    txt: 'Valor errado'
+
+# ── Valor vazio em comando que requer valor ──────────────────
+# ❌ ERRO ESPERADO: inputText requer valor
+- inputText:
+
+# ── Case-sensitivity em comando ──────────────────────────────
+# ❌ ERRO ESPERADO: capitalização errada
+- setorientation: PORTRAIT
+- Tapон: 'Login'
+
+# ── Propriedade inválida no when ─────────────────────────────
+# ❌ ERRO ESPERADO: "visibl" não é prop válida de when
+- runFlow:
+    file: 'outro-flow.yaml'
+    when:
+      visibl: '.*Texto.*'
+
+# ── setPermissions (nested object) ───────────────────────────
+# ✅ CORRETO
+- setPermissions:
+    permissions:
+      camera: allow
+      notifications: deny
+
+# ❌ ERRO ESPERADO: chave e valor inválidos
+- setPermissions:
+    permissions:
+      wifi: allow
+      camera: granted
