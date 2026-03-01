@@ -218,7 +218,7 @@ onFlowComplete:
 - back
 
 # ✅ hide
-- hide
+- hideKeyboard
 
 # ✅ openLink
 - openLink: 'https://example.com'
