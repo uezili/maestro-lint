@@ -11,6 +11,7 @@ export interface CommandDef {
   isArrayCommand?: boolean;
   arrayItemType?: string;
   nestedObject?: Record<string, NestedObjectDef>;
+  allowedValues?: string[];
 }
 
 export const COMMAND_SCHEMA: Record<string, CommandDef> = {
@@ -193,7 +194,7 @@ export const COMMAND_SCHEMA: Record<string, CommandDef> = {
     properties: [],
     optional: [],
   },
-  hide: {
+  hideKeyboard: {
     properties: [],
     optional: [],
   },
@@ -249,6 +250,32 @@ export const COMMAND_SCHEMA: Record<string, CommandDef> = {
     properties: [],
     optional: [],
     requiresValue: false,
+  },
+  inputRandomEmail: {
+    properties: [],
+    optional: [],
+    requiresValue: false,
+  },
+  assertScreenshot: {
+    properties: [],
+    optional: ['path', 'cropOn', 'thresholdPercentage', 'label'],
+    requiresValue: false,
+  },
+  extractTextWithAI: {
+    properties: [],
+    optional: ['query', 'outputVariable', 'optional'],
+    requiresValue: true,
+  },
+  setClipboard: {
+    properties: [],
+    optional: [],
+    requiresValue: true,
+  },
+  setOrientation: {
+    properties: [],
+    optional: [],
+    requiresValue: true,
+    allowedValues: ['PORTRAIT', 'LANDSCAPE_LEFT', 'LANDSCAPE_RIGHT', 'UPSIDE_DOWN'],
   },
 };
 

@@ -1,5 +1,5 @@
 import { LintError, Severity } from '../models/LintError';
-import { VALID_HEADER_PROPERTIES } from '../constants/commands';
+import { VALID_HEADER_PROPERTIES, HEADER_PROPERTY_SCHEMA } from '../constants/commands';
 import { findCaseSensitiveMatch, findBestMatch } from '../utils/helpers';
 import { ConfigManager } from '../config/ConfigManager';
 import { lintSource } from '../utils/lintSource';
@@ -61,7 +61,33 @@ export class HeaderValidator implements Validator {
       }
     }
 
-    // Tag validation
+    // Header property value validation
+    for (const [key, value] of Object.entries(headerObj)) {
+      const schema = HEADER_PROPERTY_SCHEMA[key];
+      if (!schema) {
+        continue;
+      }
+
+      const strValue = String(value);
+      if (!schema.allowedValues.includes(strValue)) {
+        const severity = this.configManager.getRuleSeverity('header', 'invalidValue') as Severity;
+        if (severity !== 'off') {
+          const lineIndex = findHeaderKeyLine(lines, key);
+          const line = lines[lineIndex] ?? '';
+          const valStart = line.indexOf(strValue);
+          const col = valStart >= 0 ? valStart : (line.indexOf(':') + 2);
+          errors.push({
+            message: `Valor inválido "${strValue}" para "${key}". Valores aceitos: ${schema.allowedValues.join(', ')}`,
+            line: lineIndex,
+            column: col,
+            endColumn: col + strValue.length,
+            severity,
+            source: lintSource('header', 'invalidValue'),
+          });
+        }
+      }
+    }
+
     const config = this.configManager.getConfig();
     if (config.tags.requiredOneOf.length > 0) {
       const tags = headerObj['tags'];

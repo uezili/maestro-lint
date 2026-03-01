@@ -3,7 +3,8 @@ import { MaestroLintProvider } from './providers/MaestroLintProvider';
 import { MaestroCodeActionProvider } from './providers/CodeActionProvider';
 import { ConfigManager } from './config/ConfigManager';
 import { OutputManager } from './utils/OutputManager';
-import { createDebouncedFn, DebouncedFn } from './utils/debounce';
+import { CONFIG_DEFAULTS } from './config/ConfigConstants';
+import { registerValidationListeners, registerFileSystemWatchers, registerDebounceListener } from './extension/listeners';
 
 let deactivateCallback: (() => void) | undefined;
 
@@ -18,22 +19,6 @@ export function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(diagnosticCollection);
 
   const lintProvider = new MaestroLintProvider(diagnosticCollection, configManager, outputManager);
-  let debouncedValidation: DebouncedFn | undefined;
-
-  const validateWithDebounce = (document: vscode.TextDocument) => {
-    const config = vscode.workspace.getConfiguration('maestroLint');
-    const delay = config.get<number>('debounceDelay', 500);
-
-    if (debouncedValidation) {
-      debouncedValidation.cancel();
-    }
-
-    debouncedValidation = createDebouncedFn(() => {
-      void lintProvider.validateDocument(document);
-    }, delay);
-
-    debouncedValidation();
-  };
 
   // Registrar Code Action Provider (Quick Fixes)
   context.subscriptions.push(
@@ -49,62 +34,24 @@ export function activate(context: vscode.ExtensionContext) {
     void lintProvider.validateDocument(vscode.window.activeTextEditor.document);
   }
 
-  // Validar ao trocar de editor
-  context.subscriptions.push(
-    vscode.window.onDidChangeActiveTextEditor((editor) => {
-      if (editor) {
-        void lintProvider.validateDocument(editor.document);
-      }
-    })
-  );
+  // Validar todos os documentos já abertos na ativação
+  for (const document of vscode.workspace.textDocuments) {
+    void lintProvider.validateDocument(document);
+  }
 
-  // Validar em tempo real (on type)
-  context.subscriptions.push(
-    vscode.workspace.onDidChangeTextDocument((event) => {
-      const config = vscode.workspace.getConfiguration('maestroLint');
-      if (!config.get<boolean>('validateOnType', true)) {
-        return;
-      }
+  // Em alguns cenários de startup remoto, os editores chegam após a ativação
+  setTimeout(() => {
+    lintProvider.revalidateAll();
+  }, CONFIG_DEFAULTS.STARTUP_VALIDATION_DELAY_MS);
 
-      validateWithDebounce(event.document);
-    })
-  );
+  // Register all validation listeners
+  registerValidationListeners(context, lintProvider, outputManager);
 
-  // Validar ao salvar
-  context.subscriptions.push(
-    vscode.workspace.onDidSaveTextDocument((document) => {
-      const config = vscode.workspace.getConfiguration('maestroLint');
-      if (config.get<boolean>('validateOnSave', true)) {
-        void lintProvider.validateDocument(document);
-      }
-    })
-  );
+  // Register file system watchers
+  registerFileSystemWatchers(context, configManager, lintProvider, outputManager);
 
-  // Limpar diagnósticos ao fechar documento
-  context.subscriptions.push(
-    vscode.workspace.onDidCloseTextDocument((document) => {
-      diagnosticCollection.delete(document.uri);
-    })
-  );
-
-  // Recarregar config quando linter.config.json mudar
-  const configWatcher = vscode.workspace.createFileSystemWatcher('**/linter.config.json');
-  context.subscriptions.push(
-    configWatcher.onDidChange(() => {
-      outputManager.log('🔄 Configuração alterada, recarregando...');
-      void configManager.reload();
-      lintProvider.revalidateAll();
-    }),
-    configWatcher.onDidCreate(() => {
-      void configManager.reload();
-      lintProvider.revalidateAll();
-    }),
-    configWatcher.onDidDelete(() => {
-      void configManager.reload();
-      lintProvider.revalidateAll();
-    }),
-    configWatcher
-  );
+  // Register debounce listener for on-type validation
+  registerDebounceListener(context, lintProvider);
 
   // Comandos
   context.subscriptions.push(
@@ -134,7 +81,6 @@ export function activate(context: vscode.ExtensionContext) {
   );
 
   deactivateCallback = () => {
-    debouncedValidation?.cancel();
     lintProvider.dispose();
   };
 

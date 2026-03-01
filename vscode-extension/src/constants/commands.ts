@@ -20,8 +20,26 @@ export const VALID_HEADER_PROPERTIES: string[] = [
   'androidWebViewHierarchy',
 ];
 
+export interface HeaderPropertyDef {
+  allowedValues: string[];
+}
+
+export const HEADER_PROPERTY_SCHEMA: Record<string, HeaderPropertyDef> = {
+  androidWebViewHierarchy: {
+    allowedValues: ['devtools'],
+  },
+};
+
 export const VALID_WHEN_PROPERTIES: string[] = ['visible', 'notVisible', 'platform', 'true'];
 
-export const VALID_PLATFORMS: string[] = ['android', 'ios', 'web'];
+export interface WhenPropertyDef {
+  allowedValues?: string[];
+}
+
+export const WHEN_PROPERTY_SCHEMA: Record<string, WhenPropertyDef> = {
+  platform: {
+    allowedValues: ['android', 'ios', 'web'],
+  },
+};
 
 export const VALID_MEDIA_EXTENSIONS = ['.png', '.jpeg', '.jpg', '.gif', '.mp4'];

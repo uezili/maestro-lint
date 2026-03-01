@@ -1,5 +1,5 @@
 import { LintError, Severity } from '../models/LintError';
-import { VALID_WHEN_PROPERTIES, VALID_PLATFORMS } from '../constants/commands';
+import { VALID_WHEN_PROPERTIES, WHEN_PROPERTY_SCHEMA } from '../constants/commands';
 import { findBestMatch } from '../utils/helpers';
 import { ConfigManager } from '../config/ConfigManager';
 import { lintSource } from '../utils/lintSource';
@@ -7,6 +7,18 @@ import { ValidationContext, Validator } from './Validator';
 
 export class WhenValidator implements Validator {
   constructor(private configManager: ConfigManager) {}
+
+  private normalizeScalarValue(value: string): string {
+    const trimmed = value.trim();
+    if (
+      (trimmed.startsWith("'") && trimmed.endsWith("'")) ||
+      (trimmed.startsWith('"') && trimmed.endsWith('"'))
+    ) {
+      return trimmed.substring(1, trimmed.length - 1);
+    }
+
+    return trimmed;
+  }
 
   validate(context: ValidationContext): LintError[] {
     const errors: LintError[] = [];
@@ -76,18 +88,21 @@ export class WhenValidator implements Validator {
             }
           }
 
-          if (propKey === 'platform') {
-            const platformValue = propTrimmed.substring(colonIndex + 1).trim();
-            if (platformValue && !VALID_PLATFORMS.includes(platformValue)) {
-              const severity = this.configManager.getRuleSeverity('when', 'invalidPlatform') as Severity;
+          const whenSchema = WHEN_PROPERTY_SCHEMA[propKey];
+          if (whenSchema?.allowedValues) {
+            const propValue = propTrimmed.substring(colonIndex + 1).trim();
+            const normalizedValue = this.normalizeScalarValue(propValue);
+            if (propValue && !whenSchema.allowedValues.includes(normalizedValue)) {
+              const severity = this.configManager.getRuleSeverity('when', 'invalidValue') as Severity;
               if (severity !== 'off') {
+                const col = propLine.indexOf(propValue);
                 errors.push({
-                  message: `Plataforma inválida: "${platformValue}". Válidas: ${VALID_PLATFORMS.join(', ')}`,
+                  message: `Valor inválido "${propValue}" para "${propKey}" em 'when'. Valores aceitos: ${whenSchema.allowedValues.join(', ')}`,
                   line: j,
-                  column: propLine.indexOf(platformValue),
-                  endColumn: propLine.indexOf(platformValue) + platformValue.length,
+                  column: col,
+                  endColumn: col + propValue.length,
                   severity,
-                  source: lintSource('when', 'invalidPlatform'),
+                  source: lintSource('when', 'invalidValue'),
                 });
               }
             }

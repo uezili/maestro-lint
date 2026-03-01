@@ -13,6 +13,7 @@ import { LintError, severityToDiagnostic } from '../models/LintError';
 import { VALID_COMMANDS } from '../constants/commands';
 import { Validator, ValidationContext } from '../validators/Validator';
 import { isRecord } from '../utils/typeGuards';
+import { RangeCalculator } from '../utils/rangeCalculator';
 
 export class MaestroLintProvider {
   private readonly validators: Validator[];
@@ -87,7 +88,15 @@ export class MaestroLintProvider {
         diagnostic.source = 'maestro-lint(yaml.syntax)';
         this.diagnosticCollection.set(document.uri, [diagnostic]);
       } else {
-        this.outputManager.error(`Falha ao validar ${document.fileName}`);
+        const err = e instanceof Error ? e : new Error(String(e));
+        this.outputManager.error(`Falha ao validar ${document.fileName}: ${err.message}`);
+        const diagnostic = new vscode.Diagnostic(
+          new vscode.Range(0, 0, 0, 1),
+          `Erro interno do Maestro Lint: ${err.message}`,
+          vscode.DiagnosticSeverity.Error
+        );
+        diagnostic.source = 'maestro-lint(runtime)';
+        this.diagnosticCollection.set(document.uri, [diagnostic]);
       }
     }
   }
@@ -131,8 +140,22 @@ export class MaestroLintProvider {
     }
   }
 
+  clearDocumentDiagnostics(uri: vscode.Uri): void {
+    this.diagnosticCollection.delete(uri);
+  }
+
   dispose(): void {
     this.diagnosticCollection?.clear();
+  }
+
+  private parseYaml<T = unknown>(text: string): T | null {
+    try {
+      return yaml.load(text) as T | null;
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : String(error);
+      this.outputManager.warn(`Erro ao fazer parse YAML: ${msg}`);
+      return null;
+    }
   }
 
   private async lint(text: string, filePath: string): Promise<LintError[]> {
@@ -141,29 +164,22 @@ export class MaestroLintProvider {
     let header: Record<string, unknown> | null = null;
     let commands: unknown[] = [];
 
-    // Parse header (primeira parte)
+    // Parse header with type safety
     if (documents.length >= 1) {
       const headerText = documents[0];
-      try {
-        const headerObj = yaml.load(headerText) as Record<string, unknown> | null;
-        if (isRecord(headerObj)) {
-          header = headerObj;
-        }
-      } catch {
-        this.outputManager.warn(`Falha no parse do header em ${filePath}`);
+      const headerObj = this.parseYaml<Record<string, unknown> | null>(headerText);
+      if (isRecord(headerObj)) {
+        header = headerObj;
       }
     }
 
-    // Parse commands (segunda parte, após ---)
+    // Parse commands with validation
     if (documents.length >= 2) {
       const commandsText = documents.slice(1).join('---');
-      try {
-        const commandsObj = yaml.load(commandsText);
-        if (Array.isArray(commandsObj)) {
-          commands = commandsObj;
-        }
-      } catch {
-        this.outputManager.warn(`Falha no parse de comandos em ${filePath}`);
+      const commandsArray = this.parseYaml<unknown[]>(commandsText);
+      if (Array.isArray(commandsArray) && commandsArray.length > 0) {
+        // Validate that each item is an object (or string for simple commands)
+        commands = commandsArray.filter((cmd) => isRecord(cmd) || typeof cmd === 'string');
       }
     }
 
@@ -185,19 +201,8 @@ export class MaestroLintProvider {
 
   private errorsToDiagnostics(errors: LintError[], document: vscode.TextDocument): vscode.Diagnostic[] {
     return errors.map((error) => {
-      const line = Math.min(error.line, document.lineCount - 1);
-      const lineText = document.lineAt(line).text;
-      const startCol = Math.min(error.column, lineText.length);
-      const endCol = error.endColumn
-        ? Math.min(error.endColumn, lineText.length)
-        : lineText.length;
-
-      const range = new vscode.Range(line, startCol, line, endCol);
-      const diagnostic = new vscode.Diagnostic(
-        range,
-        error.message,
-        severityToDiagnostic(error.severity)
-      );
+      const range = RangeCalculator.createDiagnosticRange(error, document);
+      const diagnostic = new vscode.Diagnostic(range, error.message, severityToDiagnostic(error.severity));
       diagnostic.source = error.source;
       return diagnostic;
     });

@@ -66,9 +66,30 @@ export class CommandValidator implements Validator {
             }
           }
 
+          // Validate allowed values
+          const def = getCommandDef(key);
+          if (def?.allowedValues && value != null && value !== '') {
+            const strValue = String(value);
+            if (!def.allowedValues.includes(strValue)) {
+              const severity = this.configManager.getRuleSeverity('command', 'invalidValue') as Severity;
+              if (severity !== 'off') {
+                const line = lines[lineIndex] ?? '';
+                const valStart = line.indexOf(strValue);
+                const col = valStart >= 0 ? valStart : (line.indexOf(':') + 2);
+                errors.push({
+                  message: `Valor inválido "${strValue}" para "${key}". Valores aceitos: ${def.allowedValues.join(', ')}`,
+                  line: lineIndex,
+                  column: col,
+                  endColumn: col + strValue.length,
+                  severity,
+                  source: lintSource('command', 'invalidValue'),
+                });
+              }
+            }
+          }
+
           // Validate empty value
           if (value === '' || value === null) {
-            const def = getCommandDef(key);
             // Só reporta emptyValue se o comando requer valor
             if (def?.requiresValue) {
               const severity = this.configManager.getRuleSeverity('command', 'emptyValue') as Severity;
@@ -155,7 +176,6 @@ export class CommandValidator implements Validator {
       return errors;
     }
 
-    // Levenshtein suggestion
     const suggestion = findBestMatch(name, VALID_COMMANDS);
     const msg = suggestion
       ? `Comando inválido: "${name}". Você quis dizer "${suggestion}"?`

@@ -2,7 +2,7 @@ import { LintError, Severity } from '../models/LintError';
 import { NESTED_OBJECT_COMMANDS, getCommandDef } from '../constants/commands';
 import type { NestedObjectDef } from '../constants/commands';
 import { ConfigManager } from '../config/ConfigManager';
-import { findKeyLine } from '../utils/lineLocator';
+import { findCommandLine, findSeparatorLine } from '../utils/lineLocator';
 import { lintSource } from '../utils/lintSource';
 import { isRecord } from '../utils/typeGuards';
 import { ValidationContext, Validator } from './Validator';
@@ -15,6 +15,9 @@ export class NestedObjectValidator implements Validator {
     const lines = context.lines;
     const commands = context.commands;
 
+    const separatorLine = findSeparatorLine(lines);
+    let commandStartLine = separatorLine >= 0 ? separatorLine + 1 : 0;
+
     for (const command of commands) {
       if (!isRecord(command)) {
         continue;
@@ -25,6 +28,7 @@ export class NestedObjectValidator implements Validator {
       for (const nestedCmd of NESTED_OBJECT_COMMANDS) {
         if (nestedCmd in commandObj) {
           const value = commandObj[nestedCmd];
+          const commandLineIndex = findCommandLine(lines, nestedCmd, commandStartLine);
           if (isRecord(value)) {
             const def = getCommandDef(nestedCmd);
             if (def?.nestedObject) {
@@ -33,11 +37,13 @@ export class NestedObjectValidator implements Validator {
                   nestedCmd,
                   value,
                   def.nestedObject,
-                  lines
+                  lines,
+                  commandLineIndex
                 )
               );
             }
           }
+          commandStartLine = commandLineIndex + 1;
         }
       }
     }
@@ -49,13 +55,16 @@ export class NestedObjectValidator implements Validator {
     commandName: string,
     value: Record<string, unknown>,
     nestedDefs: Record<string, NestedObjectDef>,
-    lines: string[]
+    lines: string[],
+    commandLineIndex: number
   ): LintError[] {
     const errors: LintError[] = [];
     const severity = this.configManager.getRuleSeverity('command', 'invalidProperty') as Severity;
     if (severity === 'off') {
       return errors;
     }
+
+    const commandIndent = lines[commandLineIndex].length - lines[commandLineIndex].trimStart().length;
 
     for (const [nestedKey, nestedDef] of Object.entries(nestedDefs)) {
       const nestedValue = value[nestedKey];
@@ -66,7 +75,8 @@ export class NestedObjectValidator implements Validator {
       if (nestedDef.isMap) {
         const map = nestedValue as Record<string, unknown>;
         for (const [key, val] of Object.entries(map)) {
-          const lineIndex = findKeyLine(lines, key);
+          // Localiza a chave dentro do bloco do comando (não no arquivo inteiro)
+          const lineIndex = this.findKeyLineInBlock(lines, key, commandLineIndex, commandIndent);
 
           // Validate key
           if (!nestedDef.validKeys.includes(key)) {
@@ -96,5 +106,29 @@ export class NestedObjectValidator implements Validator {
     }
 
     return errors;
+  }
+
+  private findKeyLineInBlock(
+    lines: string[],
+    key: string,
+    blockStartLine: number,
+    blockIndent: number
+  ): number {
+    // Procura pela chave dentro do bloco de comando, não no arquivo inteiro
+    for (let i = blockStartLine + 1; i < lines.length; i++) {
+      const trimmed = lines[i].trimStart();
+      const indent = lines[i].length - trimmed.length;
+
+      // Para quando encontra próximo comando (mesmo indent ou menor)
+      if (trimmed.startsWith('- ') && indent <= blockIndent) {
+        break;
+      }
+
+      if (trimmed.startsWith(`${key}:`)) {
+        return i;
+      }
+    }
+
+    return blockStartLine;
   }
 }
