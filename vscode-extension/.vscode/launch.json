@@ -7,7 +7,7 @@
       "request": "launch",
       "args": [
         "--extensionDevelopmentPath=${workspaceFolder}",
-        "/home/wesley/Workspace/maestro-lint/workspace"
+        "${workspaceFolder}/../workspace"
       ],
       "outFiles": [
         "${workspaceFolder}/out/**/*.js"
