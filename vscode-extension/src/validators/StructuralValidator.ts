@@ -104,39 +104,40 @@ export class StructuralValidator implements Validator {
         break;
       }
 
+      // A sibling command (`- command`) with intermediate indentation is invalid.
+      // It should be at the same level as the parent command, not inside command properties.
+      // Skip nested `commands:` items which are expected to be deeper than expectedPropIndent.
+      if (trimmed.startsWith('- ') && indent <= expectedPropIndent) {
+        const commandItemMatch = StructuralValidator.COMMAND_ITEM_PATTERN.exec(trimmed);
+        const nestedCommand = commandItemMatch ? commandItemMatch[1] : 'comando';
+        errors.push(
+          this.createIndentationError(
+            `${commandName}: comando "${nestedCommand}" está com indentação incorreta (${indent} espaços). Deve estar no nível ${commandIndent}.`,
+            line,
+            nestedCommand,
+            i,
+            severity
+          )
+        );
+        break;
+      }
+
       const propertyKey = this.extractKey(trimmed);
       if (!propertyKey || !validProps.includes(propertyKey)) {
         continue;
       }
-
-      // Propriedade esperada deveria estar no nível expectedPropIndent
-      if (indent !== expectedPropIndent) {
-        errors.push(
-          this.createIndentationError(
-            `${commandName}: propriedade "${propertyKey}" está com indentação incorreta (${indent} espaços). Deve estar no nível ${expectedPropIndent} (mesmo nível das demais propriedades do comando).`,
-            line,
-            propertyKey,
-            i,
-            severity
-          )
-        );
-      }
-
-      // Se é um bloco aninhado (env, when, commands), valida as sub-propriedades
-      if (this.isNestedBlockProperty(propertyKey)) {
-        const expectedNestedIndent = expectedPropIndent + 2;
-        errors.push(
-          ...this.checkNestedBlockIndentation(
-            commandName,
-            propertyKey,
-            lines,
-            i,
-            expectedPropIndent,
-            expectedNestedIndent,
-            severity
-          )
-        );
-      }
+      errors.push(
+        ...this.validateCommandPropertyIndentation({
+          commandName,
+          propertyKey,
+          lines,
+          line,
+          lineIndex: i,
+          indent,
+          expectedPropIndent,
+          severity,
+        })
+      );
     }
 
     return errors;
@@ -164,15 +165,10 @@ export class StructuralValidator implements Validator {
 
       const indent = this.getIndentation(line, trimmed);
 
-      // Exit nested block if we return to the parent command's indentation level or less
-      // If indent === blockIndent, we've returned to sibling properties of the command
-      // If indent < blockIndent, we've exited the command entirely
       if (this.isAboveParentBlock(indent, blockIndent)) {
         break;
       }
 
-      // If indent === blockIndent, we're back at the command level (sibling properties)
-      // These should not be validated as nested block properties
       if (this.isAtParentBlockLevel(indent, blockIndent)) {
         break;
       }
@@ -199,20 +195,14 @@ export class StructuralValidator implements Validator {
         continue;
       }
 
-      // Only validate keys that are direct children of the nested block
       if (this.isExpectedNestedIndent(indent, expectedNestedIndent)) {
-        // This is a direct child of the nested block - validate its indentation
-        // (already correct if we got here)
         continue;
       }
 
-      // In blocks that allow nested arrays/objects (`commands`), deeper
-      // indentation can be valid (e.g. properties of `- tapOn:`).
       if (this.isAllowedDeeperNesting(allowsDeeperNesting, indent, expectedNestedIndent)) {
         continue;
       }
 
-      // If we get here, indent is incorrect for this nested block
       errors.push(
         this.createIndentationError(
           `${commandName}: propriedade "${nestedKey}" em "${blockName}" está com indentação incorreta (${indent} espaços). Deve estar no nível ${expectedNestedIndent}.`,
@@ -266,6 +256,61 @@ export class StructuralValidator implements Validator {
 
   private isNestedBlockProperty(propertyKey: string): boolean {
     return propertyKey === 'env' || propertyKey === 'when' || propertyKey === 'commands';
+  }
+
+  private validateCommandPropertyIndentation(context: {
+    commandName: string;
+    propertyKey: string;
+    lines: string[];
+    line: string;
+    lineIndex: number;
+    indent: number;
+    expectedPropIndent: number;
+    severity: Severity;
+  }): LintError[] {
+    const {
+      commandName,
+      propertyKey,
+      lines,
+      line,
+      lineIndex,
+      indent,
+      expectedPropIndent,
+      severity,
+    } = context;
+
+    const errors: LintError[] = [];
+
+    if (indent !== expectedPropIndent) {
+      errors.push(
+        this.createIndentationError(
+          `${commandName}: propriedade "${propertyKey}" está com indentação incorreta (${indent} espaços). Deve estar no nível ${expectedPropIndent} (mesmo nível das demais propriedades do comando).`,
+          line,
+          propertyKey,
+          lineIndex,
+          severity
+        )
+      );
+    }
+
+    if (!this.isNestedBlockProperty(propertyKey)) {
+      return errors;
+    }
+
+    const expectedNestedIndent = expectedPropIndent + 2;
+    errors.push(
+      ...this.checkNestedBlockIndentation(
+        commandName,
+        propertyKey,
+        lines,
+        lineIndex,
+        expectedPropIndent,
+        expectedNestedIndent,
+        severity
+      )
+    );
+
+    return errors;
   }
 
   private validateCommandItemIndentation(context: CommandItemIndentationContext): LintError | null {

@@ -189,6 +189,56 @@ test('StructuralValidator reports over-indented command item inside runFlow comm
   assert.equal(commandIndentationErrors.length, 1);
 });
 
+test('StructuralValidator reports over-indented sibling command item', () => {
+  const { StructuralValidator } = require('../validators/StructuralValidator');
+  const validator = new StructuralValidator(createConfigStub());
+  const text = [
+    "- tapOn:",
+    "    text: 'OK'",
+    "  - assertVisible: 'indentação errada'",
+  ].join('\n');
+  const context = createContext(text);
+  context.commands = [];
+
+  const result = validator.validate(context);
+  const siblingCommandIndentationErrors = result.filter((error: { source: string; message: string }) =>
+    error.source === 'maestro-lint(command.indentation)' && /comando "assertVisible" está com indentação incorreta/i.test(error.message)
+  );
+
+  assert.equal(siblingCommandIndentationErrors.length, 1);
+});
+
+test('StructuralValidator does not report valid repeat and retry command items in commands blocks', () => {
+  const { StructuralValidator } = require('../validators/StructuralValidator');
+  const validator = new StructuralValidator(createConfigStub());
+  const text = [
+    '- repeat:',
+    '    times: 3',
+    '    commands:',
+    "      - tapOn: 'Next'",
+    '      - scroll',
+    '- repeat:',
+    '    while:',
+    "      notVisible: 'Final'",
+    '    commands:',
+    '      - scroll',
+    '- retry:',
+    '    maxRetries: 3',
+    '    commands:',
+    '      - tapOn:',
+    "          id: 'dynamic_button'",
+  ].join('\n');
+  const context = createContext(text);
+  context.commands = [];
+
+  const result = validator.validate(context);
+  const indentationErrors = result.filter((error: { source: string }) =>
+    error.source === 'maestro-lint(command.indentation)'
+  );
+
+  assert.equal(indentationErrors.length, 0);
+});
+
 test('WhenValidator reports invalid platform via schema', () => {
   const validator = new WhenValidator(createConfigStub());
   const text = 'appId: com.app\n---\n- tapOn:\n    text: Login\n    when:\n      platform: windows';

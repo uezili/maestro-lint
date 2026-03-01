@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 
 export class MaestroCodeActionProvider implements vscode.CodeActionProvider {
   public static readonly providedCodeActionKinds = [vscode.CodeActionKind.QuickFix];
+  private static readonly SUGGESTION_PATTERN = /Você quis dizer "([^"]+)"\?/;
 
   provideCodeActions(
     document: vscode.TextDocument,
@@ -79,7 +80,7 @@ export class MaestroCodeActionProvider implements vscode.CodeActionProvider {
   }
 
   private extractSuggestion(message: string): string | null {
-    const match = message.match(/Você quis dizer "([^"]+)"\?/);
+    const match = MaestroCodeActionProvider.SUGGESTION_PATTERN.exec(message);
     return match ? match[1] : null;
   }
 }

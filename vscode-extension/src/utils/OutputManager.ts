@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 
 export class OutputManager {
-  private outputChannel: vscode.OutputChannel;
+  private readonly outputChannel: vscode.OutputChannel;
 
   constructor() {
     this.outputChannel = vscode.window.createOutputChannel('Maestro Lint');
