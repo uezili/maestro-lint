@@ -1,0 +1,46 @@
+appId: com.saucelabs.mydemoapp.rn
+---
+- tapOn: ${output.checkoutAddress.fullName}
+- inputText:
+        text: ${fullName}
+        label: "Full Name*"
+- assertVisible: ${fullName}
+
+- tapOn: ${output.checkoutAddress.address_line}
+- inputText:
+        text: ${address_line}
+        label: "Address Line 1*"
+- assertVisible: ${address_line}
+
+- hideKeyboard
+
+- tapOn: ${output.checkoutAddress.city}
+- inputText:
+        text: ${city}
+        label: "City*"
+- assertVisible: ${city}
+
+- tapOn: ${output.checkoutAddress.state}
+- inputText:
+        text: ${state}
+        label: "State/Region"
+- assertVisible: ${state}
+
+- hideKeyboard
+
+- tapOn: ${output.checkoutAddress.zip_code}
+- inputText:
+        text: ${zip_code}
+        label: "Zip Code*"
+- assertVisible: ${zip_code}
+
+- tapOn: ${output.checkoutAddress.country}
+- inputText:
+        text: ${country}
+        label: "Country"
+
+- assertVisible: ${country}
+
+- hideKeyboard
+
+- tapOn: ${output.checkoutAddress.toPaymentBtn}

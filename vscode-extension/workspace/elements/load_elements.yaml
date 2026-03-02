@@ -1,0 +1,7 @@
+appId: com.saucelabs.mydemoapp.rn
+---
+- runScript: cart.js
+- runScript: checkout_address.js
+- runScript: checkout_payments.js
+- runScript: checkout_review.js
+- runScript: login.js
