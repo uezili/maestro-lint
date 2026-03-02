@@ -280,8 +280,6 @@ export const COMMAND_SCHEMA: Record<string, CommandDef> = {
   },
 };
 
-// --- Derivados automaticamente do schema ---
-
 export const VALID_COMMANDS: string[] = Object.keys(COMMAND_SCHEMA);
 
 export const ARRAY_COMMANDS: string[] = Object.entries(COMMAND_SCHEMA)

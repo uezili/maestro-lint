@@ -1,0 +1,6 @@
+{
+  "sonarlint.connectedMode.project": {
+    "connectionId": "uezili",
+    "projectKey": "uezili_maestro-lint"
+  }
+}

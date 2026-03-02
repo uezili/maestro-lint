@@ -239,6 +239,25 @@ test('StructuralValidator does not report valid repeat and retry command items i
   assert.equal(indentationErrors.length, 0);
 });
 
+test('StructuralValidator reports over-indented key/value block for inputText', () => {
+  const { StructuralValidator } = require('../validators/StructuralValidator');
+  const validator = new StructuralValidator(createConfigStub());
+  const text = [
+    '- inputText:',
+    '      text: ${username}',
+    '      label: "Username"',
+  ].join('\n');
+  const context = createContext(text);
+  context.commands = [];
+
+  const result = validator.validate(context);
+  const indentationErrors = result.filter((error: { source: string; message: string }) =>
+    error.source === 'maestro-lint(command.indentation)' && /inputText: bloco de valor está com indentação incorreta/i.test(error.message)
+  );
+
+  assert.equal(indentationErrors.length, 2);
+});
+
 test('WhenValidator reports invalid platform via schema', () => {
   const validator = new WhenValidator(createConfigStub());
   const text = 'appId: com.app\n---\n- tapOn:\n    text: Login\n    when:\n      platform: windows';
