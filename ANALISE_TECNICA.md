@@ -107,3 +107,15 @@ O projeto tem uma base modular boa e clara, com arquitetura adequada para evolu�
 - elevar **confiabilidade operacional** com testes automatizados e baseline de lint limpo.
 
 Esses pontos trazem ganho imediato de confiança no linter sem exigir refatorações extensas.
+
+---
+
+## 6) Revalidação dos pontos (2026-03-02)
+
+Reavaliação feita sobre os pontos destacados no PR e no arquivo mencionado (`src/LintEngine.js`), comparando com o estado atual do projeto:
+
+- `src/LintEngine.js` ainda usa validação textual de `appId` via `text.includes('appId:')` (**correção ainda necessária**).
+- `src/LintEngine.js` ainda mantém fallback por regex em `_validatePropertiesPattern` para cenários de parse inválido (**melhoria ainda necessária para reduzir falsos positivos**).
+- `src/helpers.js` ainda localiza linha por `includes(searchTerm)` em `findLineNumber` (**melhoria ainda necessária para precisão**).
+- `src/validators/FilePathValidator.js` continua validando existência por resolução relativa sem regra explícita para paths fora da raiz lógica do projeto (**ajuste ainda recomendado conforme regra de negócio**).
+- baseline de qualidade interna permanece com falhas de lint (`npm run eslint`), indicando necessidade de normalização técnica do repositório (**correção ainda necessária**).
