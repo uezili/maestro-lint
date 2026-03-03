@@ -1,4 +1,5 @@
 const fs = require('fs');
+// js-yaml: usado para parsing de documentos YAML (yaml.load) — header (docs[0]) e seção de comandos (docs[1])
 const yaml = require('js-yaml');
 const { detectMultipleParsingErrors } = require('./YamlError');
 const ErrorSeverityConverter = require('./ErrorSeverityConverter');

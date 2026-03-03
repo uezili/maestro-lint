@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+// js-yaml: usado para parsing YAML (yaml.load) em parseYaml() e para capturar yaml.YAMLException no validateDocument()
 import * as yaml from 'js-yaml';
 import { ConfigManager } from '../config/ConfigManager';
 import { OutputManager } from '../utils/OutputManager';
