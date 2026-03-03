@@ -1,5 +1,5 @@
-const fs = require('fs');
-const path = require('path');
+const fs = require('node:fs');
+const path = require('node:path');
 const { VALID_SEVERITIES, SEVERITY_LEVELS } = require('./constants');
 
 class ConfigManager {
