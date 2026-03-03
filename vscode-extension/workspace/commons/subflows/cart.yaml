@@ -1,0 +1,11 @@
+appId: com.saucelabs.mydemoapp.rn
+---
+- tapOn: ${productName}
+- assertVisible: ${productName}
+
+- tapOn: ${output.cart.addToCartBtn}
+
+- copyTextFrom:
+    text: ${output.cart.productPrice}
+
+- evalScript: ${output.price = maestro.copiedText}

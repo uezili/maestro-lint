@@ -1,0 +1,15 @@
+appId: com.saucelabs.mydemoapp.rn
+---
+- assertVisible: "Login"
+- tapOn: ${output.login.email}
+- inputText:
+    text: ${username}
+    label: "Username"
+
+- tapOn: ${output.login.password}
+- inputText:
+    text: ${password}
+    label: "Password"
+
+- tapOn: ${output.login.loginBtn}
+- assertNotVisible: ${output.login.loginBtn}

@@ -1,0 +1,37 @@
+appId: com.saucelabs.mydemoapp.rn
+---
+- assertVisible: "Enter a payment method"
+
+- tapOn: ${output.checkoutPayments.fullName}
+- inputText:
+        text: ${fullName}
+        label: "Full Name*"
+- assertVisible: ${fullName}
+
+- hideKeyboard
+
+- tapOn: ${output.checkoutPayments.cardNumber}
+- inputText:
+        text: ${card_number}
+        label: "Card Number*"
+- assertVisible: ${card_number}
+
+- hideKeyboard
+
+- tapOn: ${output.checkoutPayments.expirationDate}
+- inputText:
+        text: ${expiration_date}
+        label: "Expiration Date*"
+- assertVisible: ${expiration_date}
+
+- tapOn: ${output.checkoutPayments.securityCode}
+- inputText:
+        text: ${security_code}
+        label: "Security Code*"
+- assertVisible: ${security_code}
+
+- hideKeyboard
+
+- doubleTapOn: ${output.checkoutPayments.reviewOrderButton}
+
+- assertVisible: ${fullName}

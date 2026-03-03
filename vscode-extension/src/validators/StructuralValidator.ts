@@ -53,9 +53,6 @@ export class StructuralValidator implements Validator {
       }
 
       const validProps = getCommandProperties(commandName);
-      if (validProps.length === 0) {
-        continue;
-      }
 
       const commandIndent = line.length - trimmed.length;
       // Properties of a command should be at commandIndent + 4
@@ -104,25 +101,39 @@ export class StructuralValidator implements Validator {
         break;
       }
 
-      // A sibling command (`- command`) with intermediate indentation is invalid.
-      // It should be at the same level as the parent command, not inside command properties.
-      // Skip nested `commands:` items which are expected to be deeper than expectedPropIndent.
-      if (trimmed.startsWith('- ') && indent <= expectedPropIndent) {
-        const commandItemMatch = StructuralValidator.COMMAND_ITEM_PATTERN.exec(trimmed);
-        const nestedCommand = commandItemMatch ? commandItemMatch[1] : 'comando';
-        errors.push(
-          this.createIndentationError(
-            `${commandName}: comando "${nestedCommand}" está com indentação incorreta (${indent} espaços). Deve estar no nível ${commandIndent}.`,
-            line,
-            nestedCommand,
-            i,
-            severity
-          )
-        );
+      const siblingCommandError = this.validateSiblingCommandIndentation({
+        commandName,
+        trimmed,
+        indent,
+        expectedPropIndent,
+        commandIndent,
+        line,
+        lineIndex: i,
+        severity,
+      });
+      if (siblingCommandError) {
+        errors.push(siblingCommandError);
         break;
       }
 
       const propertyKey = this.extractKey(trimmed);
+
+      if (this.hasNoProperties(validProps)) {
+        const valueBlockError = this.validateValueBlockIndentation({
+          commandName,
+          propertyKey,
+          indent,
+          expectedPropIndent,
+          line,
+          lineIndex: i,
+          severity,
+        });
+        if (valueBlockError) {
+          errors.push(valueBlockError);
+        }
+        continue;
+      }
+
       if (!propertyKey || !validProps.includes(propertyKey)) {
         continue;
       }
@@ -141,6 +152,78 @@ export class StructuralValidator implements Validator {
     }
 
     return errors;
+  }
+
+  private validateSiblingCommandIndentation(context: {
+    commandName: string;
+    trimmed: string;
+    indent: number;
+    expectedPropIndent: number;
+    commandIndent: number;
+    line: string;
+    lineIndex: number;
+    severity: Severity;
+  }): LintError | null {
+    const {
+      commandName,
+      trimmed,
+      indent,
+      expectedPropIndent,
+      commandIndent,
+      line,
+      lineIndex,
+      severity,
+    } = context;
+
+    if (!trimmed.startsWith('- ') || indent > expectedPropIndent) {
+      return null;
+    }
+
+    const commandItemMatch = StructuralValidator.COMMAND_ITEM_PATTERN.exec(trimmed);
+    const nestedCommand = commandItemMatch ? commandItemMatch[1] : 'comando';
+    return this.createIndentationError(
+      `${commandName}: comando "${nestedCommand}" está com indentação incorreta (${indent} espaços). Deve estar no nível ${commandIndent}.`,
+      line,
+      nestedCommand,
+      lineIndex,
+      severity
+    );
+  }
+
+  private hasNoProperties(validProps: string[]): boolean {
+    return validProps.length === 0;
+  }
+
+  private validateValueBlockIndentation(context: {
+    commandName: string;
+    propertyKey: string | null;
+    indent: number;
+    expectedPropIndent: number;
+    line: string;
+    lineIndex: number;
+    severity: Severity;
+  }): LintError | null {
+    const {
+      commandName,
+      propertyKey,
+      indent,
+      expectedPropIndent,
+      line,
+      lineIndex,
+      severity,
+    } = context;
+
+    if (!propertyKey || indent === expectedPropIndent) {
+      return null;
+    }
+
+    return this.createIndentationError(
+      `${commandName}: bloco de valor está com indentação incorreta (${indent} espaços). Deve estar no nível ${expectedPropIndent}.`,
+      line,
+      propertyKey,
+      lineIndex,
+      severity
+    );
   }
 
   private checkNestedBlockIndentation(

@@ -1,0 +1,36 @@
+appId: com.saucelabs.mydemoapp.rn
+
+env:
+  productNameA: "Sauce Labs Backpack"
+  productNameB: "Sauce Labs Bike Light"
+---
+- runFlow: elements/load_elements.yaml
+
+- launchApp:
+    clearState: true
+
+- runFlow:
+    file: subflows/cart.yaml
+    env:
+      productName: ${productNameA}
+
+- back
+
+- runFlow:
+    file: subflows/cart.yaml
+    env:
+      productName: ${productNameB}
+
+- tapOn: ${output.cart.cartBadgeBtn}
+
+- assertVisible: ${output.cart.myCartTitle}
+
+- tapOn: ${output.cart.removeItemBtn}
+
+- copyTextFrom:
+    text: ${output.cart.totalPrice}
+
+- assertNotVisible: ${productNameA}
+- assertVisible: ${productNameB}
+
+- assertTrue: ${output.price == maestro.copiedText}

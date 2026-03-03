@@ -1,0 +1,7 @@
+appId: com.saucelabs.mydemoapp.rn
+---
+- assertVisible: ${output.checkoutReview.reviewYourOrderTitle}
+
+- scrollUntilVisible:
+    element:
+      text: ${output.checkoutReview.dhlStandardDeliveryText}

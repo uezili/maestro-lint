@@ -1,0 +1,50 @@
+appId: com.saucelabs.mydemoapp.rn
+
+env:
+  productName: "Sauce Labs Bike Light"
+---
+- runFlow: elements/load_elements.yaml
+- runScript: scripts/factory_data.js
+- runScript: auth.js
+
+- launchApp:
+    clearState: true
+
+- runFlow:
+    file: subflows/cart.yaml
+    env:
+      productName: ${productName}
+
+- tapOn: ${output.cart.cartBadgeBtn}
+
+- assertVisible: ${output.cart.myCartTitle}
+
+- tapOn: ${output.cart.checkoutBtn}
+
+- runFlow:
+    file: subflows/login.yaml
+    env:
+      username: ${output.helper.env.USERNAME}
+      password: ${output.helper.env.PASSWORD}
+
+- tapOn: ${output.checkoutAddress.toPaymentBtn}
+
+- assertVisible: ${output.checkoutAddress.fullNameErrorText}
+- assertVisible: ${output.checkoutAddress.addressLineErrorText}
+- assertVisible: ${output.checkoutAddress.cityErrorText}
+- assertVisible: ${output.checkoutAddress.zipCodeErrorText}
+- assertVisible: ${output.checkoutAddress.countryErrorText}
+
+- runFlow:
+    file: subflows/checkout_address.yaml
+    env:
+      fullName: ${output.RANDOM_FULLNAME}
+      address_line: ${output.RANDOM_ADDRESS_LINE}
+      city: ${output.RANDOM_CITY}
+      state: ${output.RANDOM_STATE}
+      zip_code: ${output.RANDOM_ZIP_CODE}
+      country: ${output.RANDOM_COUNTRY}
+
+- tapOn: ${output.checkoutPayments.reviewOrderButton}
+
+- assertVisible: ${output.checkoutPayments.validationErrorText}
