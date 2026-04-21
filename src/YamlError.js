@@ -1,3 +1,4 @@
+// js-yaml: usado para tentar fazer parse iterativo do YAML (yaml.load) e capturar erros de indentação/sintaxe
 const yaml = require('js-yaml');
 const { LIMITS } = require('./constants');
 
